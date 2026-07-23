@@ -23,8 +23,10 @@ class SignUpOptionButton extends StatefulWidget {
     this.iconBorderColor,
     this.onPressed,
     this.iconSize = 24,
-  }) : assert(icon != null || customIcon != null,
-            'Must provide either icon or customIcon');
+  }) : assert(
+         icon != null || customIcon != null,
+         'Must provide either icon or customIcon',
+       );
 
   @override
   State<SignUpOptionButton> createState() => _SignUpOptionButtonState();
@@ -43,9 +45,10 @@ class _SignUpOptionButtonState extends State<SignUpOptionButton>
       duration: const Duration(milliseconds: 120),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.975).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.975,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -58,10 +61,8 @@ class _SignUpOptionButtonState extends State<SignUpOptionButton>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _scaleAnimation.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: _scaleAnimation.value, child: child),
       child: GestureDetector(
         onTapDown: (_) {
           setState(() => _isPressed = true);
@@ -97,7 +98,8 @@ class _SignUpOptionButtonState extends State<SignUpOptionButton>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: widget.iconBackgroundColor ??
+                  color:
+                      widget.iconBackgroundColor ??
                       AppColors.purpleAccent.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                   border: widget.iconBorderColor != null
@@ -105,7 +107,8 @@ class _SignUpOptionButtonState extends State<SignUpOptionButton>
                       : null,
                 ),
                 alignment: Alignment.center,
-                child: widget.customIcon ??
+                child:
+                    widget.customIcon ??
                     Icon(
                       widget.icon,
                       color: widget.iconColor,
@@ -144,11 +147,7 @@ class FeatureChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const FeatureChip({
-    super.key,
-    required this.icon,
-    required this.label,
-  });
+  const FeatureChip({super.key, required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {

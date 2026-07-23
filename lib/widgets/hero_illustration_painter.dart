@@ -70,10 +70,7 @@ class HeroIllustrationPainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            bookColors[i],
-            bookColors[i].withValues(alpha: 0.8),
-          ],
+          colors: [bookColors[i], bookColors[i].withValues(alpha: 0.8)],
         ).createShader(Rect.fromLTWH(bx, by, bookWidth, bookHeight * 0.28));
       canvas.drawRRect(
         RRect.fromRectAndRadius(
@@ -119,15 +116,18 @@ class HeroIllustrationPainter extends CustomPainter {
 
     // Gavel handle
     final handlePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          const Color(0xFF8B6914),
-          const Color(0xFF6B4F10),
-          const Color(0xFF4A3508),
-        ],
-      ).createShader(Rect.fromLTWH(gavelCenterX - 40, gavelCenterY - 5, 80, 10));
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF8B6914),
+              const Color(0xFF6B4F10),
+              const Color(0xFF4A3508),
+            ],
+          ).createShader(
+            Rect.fromLTWH(gavelCenterX - 40, gavelCenterY - 5, 80, 10),
+          );
 
     canvas.save();
     canvas.translate(gavelCenterX, gavelCenterY);
@@ -145,11 +145,7 @@ class HeroIllustrationPainter extends CustomPainter {
     // Gavel head
     final headPaint = Paint()
       ..shader = const LinearGradient(
-        colors: [
-          Color(0xFF8B6914),
-          Color(0xFFAA8420),
-          Color(0xFF6B4F10),
-        ],
+        colors: [Color(0xFF8B6914), Color(0xFFAA8420), Color(0xFF6B4F10)],
       ).createShader(const Rect.fromLTWH(-55, -18, 20, 36));
 
     // Left head
@@ -194,14 +190,14 @@ class HeroIllustrationPainter extends CustomPainter {
 
     // Gavel base/sound block
     final basePaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFF6B4F10),
-          const Color(0xFF4A3508),
-        ],
-      ).createShader(Rect.fromLTWH(gavelCenterX - 30, gavelCenterY + 35, 60, 15));
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [const Color(0xFF6B4F10), const Color(0xFF4A3508)],
+          ).createShader(
+            Rect.fromLTWH(gavelCenterX - 30, gavelCenterY + 35, 60, 15),
+          );
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(

@@ -37,19 +37,23 @@ class OnboardingPage3 extends StatelessWidget {
                               fit: BoxFit.contain,
                               alignment: Alignment.topRight,
                               // Using errorBuilder in case they haven't added it yet
-                              errorBuilder: (context, error, stackTrace) => Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'Add\nphone_mockup.png\nto assets/images',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 10, color: Colors.grey),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade200,
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: const Center(
+                                      child: Text(
+                                        'Add\nphone_mockup.png\nto assets/images',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
                             ),
                           ),
                         ),
@@ -71,7 +75,7 @@ class OnboardingPage3 extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              
+
                               // Title
                               RichText(
                                 text: TextSpan(
@@ -98,7 +102,7 @@ class OnboardingPage3 extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              
+
                               // Description
                               Text(
                                 'From case intake to resolution,\nwe manage everything with\ncare, transparency and\nexpertise.',
@@ -110,7 +114,7 @@ class OnboardingPage3 extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 20),
-                              
+
                               // Purple Line
                               Container(
                                 width: 40,
@@ -165,11 +169,7 @@ class OnboardingPage3 extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Container(
-              width: 30,
-              height: 2,
-              color: const Color(0xFFD4A843),
-            ),
+            Container(width: 30, height: 2, color: const Color(0xFFD4A843)),
             const SizedBox(height: 24),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,10 +328,7 @@ class OnboardingPage3 extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF2E1C60),
-                width: 1,
-              ),
+              border: Border.all(color: const Color(0xFF2E1C60), width: 1),
             ),
             child: Material(
               color: Colors.transparent,
@@ -402,11 +399,7 @@ class OnboardingPage3 extends StatelessWidget {
                   color: const Color(0xFF3B2A70),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(
-                  Icons.lock,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.lock, color: Colors.white, size: 16),
               ),
               const SizedBox(width: 12),
               RichText(

@@ -24,9 +24,7 @@ class MashviraLogo extends StatelessWidget {
         SizedBox(
           width: size,
           height: size,
-          child: CustomPaint(
-            painter: _LogoPainter(color: primaryColor),
-          ),
+          child: CustomPaint(painter: _LogoPainter(color: primaryColor)),
         ),
         if (showText) ...[
           SizedBox(height: size * 0.05),
@@ -88,7 +86,7 @@ class _LogoPainter extends CustomPainter {
     // ── 1. Draw the Shield ──
     final shieldPath = Path();
     shieldPath.moveTo(w * 0.25, h * 0.15); // Top left
-    shieldPath.lineTo(w * 0.5, h * 0.05);  // Top center peak
+    shieldPath.lineTo(w * 0.5, h * 0.05); // Top center peak
     shieldPath.lineTo(w * 0.75, h * 0.15); // Top right
     shieldPath.lineTo(w * 0.75, h * 0.55); // Right edge down
     // Curve to bottom point
@@ -100,28 +98,64 @@ class _LogoPainter extends CustomPainter {
 
     // ── 2. Draw the Balance Scale inside the Shield ──
     // Center post
-    canvas.drawLine(Offset(w * 0.5, h * 0.25), Offset(w * 0.5, h * 0.75), paint);
+    canvas.drawLine(
+      Offset(w * 0.5, h * 0.25),
+      Offset(w * 0.5, h * 0.75),
+      paint,
+    );
     // Base of scale
-    canvas.drawLine(Offset(w * 0.4, h * 0.75), Offset(w * 0.6, h * 0.75), paint);
+    canvas.drawLine(
+      Offset(w * 0.4, h * 0.75),
+      Offset(w * 0.6, h * 0.75),
+      paint,
+    );
     // Top beam
-    canvas.drawLine(Offset(w * 0.35, h * 0.35), Offset(w * 0.65, h * 0.35), paint);
-    
+    canvas.drawLine(
+      Offset(w * 0.35, h * 0.35),
+      Offset(w * 0.65, h * 0.35),
+      paint,
+    );
+
     // Left pan strings
     paint.strokeWidth = w * 0.01;
-    canvas.drawLine(Offset(w * 0.35, h * 0.35), Offset(w * 0.3, h * 0.55), paint);
-    canvas.drawLine(Offset(w * 0.35, h * 0.35), Offset(w * 0.4, h * 0.55), paint);
+    canvas.drawLine(
+      Offset(w * 0.35, h * 0.35),
+      Offset(w * 0.3, h * 0.55),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.35, h * 0.35),
+      Offset(w * 0.4, h * 0.55),
+      paint,
+    );
     // Left pan
-    canvas.drawLine(Offset(w * 0.28, h * 0.55), Offset(w * 0.42, h * 0.55), paint);
+    canvas.drawLine(
+      Offset(w * 0.28, h * 0.55),
+      Offset(w * 0.42, h * 0.55),
+      paint,
+    );
 
     // Right pan strings
-    canvas.drawLine(Offset(w * 0.65, h * 0.35), Offset(w * 0.6, h * 0.55), paint);
-    canvas.drawLine(Offset(w * 0.65, h * 0.35), Offset(w * 0.7, h * 0.55), paint);
+    canvas.drawLine(
+      Offset(w * 0.65, h * 0.35),
+      Offset(w * 0.6, h * 0.55),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(w * 0.65, h * 0.35),
+      Offset(w * 0.7, h * 0.55),
+      paint,
+    );
     // Right pan
-    canvas.drawLine(Offset(w * 0.58, h * 0.55), Offset(w * 0.72, h * 0.55), paint);
+    canvas.drawLine(
+      Offset(w * 0.58, h * 0.55),
+      Offset(w * 0.72, h * 0.55),
+      paint,
+    );
 
     // ── 3. Draw the Laurels around the Shield ──
     paint.strokeWidth = w * 0.02;
-    
+
     // Left Laurel Branch
     final leftBranch = Path();
     leftBranch.moveTo(w * 0.15, h * 0.85);
@@ -143,7 +177,10 @@ class _LogoPainter extends CustomPainter {
       canvas.save();
       canvas.translate(lx, ly);
       canvas.rotate(0.5 - t * 0.5); // Angled leaves
-      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: w * 0.06, height: h * 0.03), fillPaint);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: w * 0.06, height: h * 0.03),
+        fillPaint,
+      );
       canvas.restore();
 
       // Right leaves
@@ -152,7 +189,10 @@ class _LogoPainter extends CustomPainter {
       canvas.save();
       canvas.translate(rx, ry);
       canvas.rotate(-0.5 + t * 0.5);
-      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: w * 0.06, height: h * 0.03), fillPaint);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: w * 0.06, height: h * 0.03),
+        fillPaint,
+      );
       canvas.restore();
     }
   }

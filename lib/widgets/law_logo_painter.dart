@@ -28,38 +28,64 @@ class ScalesOfJusticeLogoPainter extends CustomPainter {
       ..strokeWidth = 4
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
 
-    final shieldPath = _createShieldPath(cx, shieldTop, shieldWidth, shieldHeight);
+    final shieldPath = _createShieldPath(
+      cx,
+      shieldTop,
+      shieldWidth,
+      shieldHeight,
+    );
     canvas.drawPath(shieldPath, glowPaint);
 
     // Shield gradient fill
     final shieldFillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          AppColors.backgroundLight.withValues(alpha: 0.6),
-          AppColors.backgroundDark.withValues(alpha: 0.8),
-        ],
-      ).createShader(Rect.fromLTWH(cx - shieldWidth / 2, shieldTop, shieldWidth, shieldHeight));
+      ..shader =
+          LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.backgroundLight.withValues(alpha: 0.6),
+              AppColors.backgroundDark.withValues(alpha: 0.8),
+            ],
+          ).createShader(
+            Rect.fromLTWH(
+              cx - shieldWidth / 2,
+              shieldTop,
+              shieldWidth,
+              shieldHeight,
+            ),
+          );
     canvas.drawPath(shieldPath, shieldFillPaint);
 
     // Shield border
     final borderPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          AppColors.goldLight,
-          AppColors.goldPrimary,
-          AppColors.goldDark,
-        ],
-      ).createShader(Rect.fromLTWH(cx - shieldWidth / 2, shieldTop, shieldWidth, shieldHeight))
+      ..shader =
+          const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.goldLight,
+              AppColors.goldPrimary,
+              AppColors.goldDark,
+            ],
+          ).createShader(
+            Rect.fromLTWH(
+              cx - shieldWidth / 2,
+              shieldTop,
+              shieldWidth,
+              shieldHeight,
+            ),
+          )
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5;
     canvas.drawPath(shieldPath, borderPaint);
 
     // Inner border
-    final innerShield = _createShieldPath(cx, shieldTop + 6, shieldWidth - 12, shieldHeight - 12);
+    final innerShield = _createShieldPath(
+      cx,
+      shieldTop + 6,
+      shieldWidth - 12,
+      shieldHeight - 12,
+    );
     final innerPaint = Paint()
       ..color = AppColors.goldPrimary.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
@@ -73,13 +99,28 @@ class ScalesOfJusticeLogoPainter extends CustomPainter {
 
     path.moveTo(cx, top);
     // Top right curve
-    path.quadraticBezierTo(cx + halfW * 0.3, top, cx + halfW, top + height * 0.08);
+    path.quadraticBezierTo(
+      cx + halfW * 0.3,
+      top,
+      cx + halfW,
+      top + height * 0.08,
+    );
     // Right side
     path.lineTo(cx + halfW, top + height * 0.5);
     // Bottom right curve to point
-    path.quadraticBezierTo(cx + halfW * 0.6, top + height * 0.8, cx, top + height);
+    path.quadraticBezierTo(
+      cx + halfW * 0.6,
+      top + height * 0.8,
+      cx,
+      top + height,
+    );
     // Bottom left curve
-    path.quadraticBezierTo(cx - halfW * 0.6, top + height * 0.8, cx - halfW, top + height * 0.5);
+    path.quadraticBezierTo(
+      cx - halfW * 0.6,
+      top + height * 0.8,
+      cx - halfW,
+      top + height * 0.5,
+    );
     // Left side
     path.lineTo(cx - halfW, top + height * 0.08);
     // Top left curve
@@ -120,9 +161,17 @@ class ScalesOfJusticeLogoPainter extends CustomPainter {
     basePath.close();
 
     final basePaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [AppColors.goldLight, AppColors.goldDark],
-      ).createShader(Rect.fromLTWH(cx - size.width * 0.1, scaleY, size.width * 0.2, size.height * 0.12))
+      ..shader =
+          const LinearGradient(
+            colors: [AppColors.goldLight, AppColors.goldDark],
+          ).createShader(
+            Rect.fromLTWH(
+              cx - size.width * 0.1,
+              scaleY,
+              size.width * 0.2,
+              size.height * 0.12,
+            ),
+          )
       ..style = PaintingStyle.fill;
     canvas.drawPath(basePath, basePaint);
 
@@ -141,28 +190,68 @@ class ScalesOfJusticeLogoPainter extends CustomPainter {
     );
 
     // Left chain and pan
-    _drawChainAndPan(canvas, cx - beamWidth, scaleY - size.height * 0.12, chainLength, size.width * 0.1, goldPaint, goldFillPaint);
+    _drawChainAndPan(
+      canvas,
+      cx - beamWidth,
+      scaleY - size.height * 0.12,
+      chainLength,
+      size.width * 0.1,
+      goldPaint,
+      goldFillPaint,
+    );
 
     // Right chain and pan
-    _drawChainAndPan(canvas, cx + beamWidth, scaleY - size.height * 0.12, chainLength, size.width * 0.1, goldPaint, goldFillPaint);
+    _drawChainAndPan(
+      canvas,
+      cx + beamWidth,
+      scaleY - size.height * 0.12,
+      chainLength,
+      size.width * 0.1,
+      goldPaint,
+      goldFillPaint,
+    );
   }
 
-  void _drawChainAndPan(Canvas canvas, double x, double topY, double chainLen, double panRadius, Paint strokePaint, Paint fillPaint) {
+  void _drawChainAndPan(
+    Canvas canvas,
+    double x,
+    double topY,
+    double chainLen,
+    double panRadius,
+    Paint strokePaint,
+    Paint fillPaint,
+  ) {
     // Chain lines
     final bottomY = topY + chainLen;
-    canvas.drawLine(Offset(x, topY), Offset(x - panRadius * 0.6, bottomY), strokePaint);
-    canvas.drawLine(Offset(x, topY), Offset(x + panRadius * 0.6, bottomY), strokePaint);
+    canvas.drawLine(
+      Offset(x, topY),
+      Offset(x - panRadius * 0.6, bottomY),
+      strokePaint,
+    );
+    canvas.drawLine(
+      Offset(x, topY),
+      Offset(x + panRadius * 0.6, bottomY),
+      strokePaint,
+    );
 
     // Pan (curved arc)
     final panPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [AppColors.goldLight, AppColors.goldDark],
-      ).createShader(Rect.fromLTWH(x - panRadius, bottomY - 4, panRadius * 2, 12))
+      ..shader =
+          LinearGradient(
+            colors: [AppColors.goldLight, AppColors.goldDark],
+          ).createShader(
+            Rect.fromLTWH(x - panRadius, bottomY - 4, panRadius * 2, 12),
+          )
       ..style = PaintingStyle.fill;
 
     final panPath = Path();
     panPath.moveTo(x - panRadius * 0.6, bottomY);
-    panPath.quadraticBezierTo(x, bottomY + panRadius * 0.5, x + panRadius * 0.6, bottomY);
+    panPath.quadraticBezierTo(
+      x,
+      bottomY + panRadius * 0.5,
+      x + panRadius * 0.6,
+      bottomY,
+    );
     panPath.close();
     canvas.drawPath(panPath, panPaint);
 
@@ -217,13 +306,23 @@ class LaurelWreathPainter extends CustomPainter {
       final t = 0.15 + (i * 0.1);
       // Calculate point on stem curve
       final py = size.height * (0.85 - t * 0.7);
-      final px = startX + direction * size.width * 0.18 * sin(t * pi * 0.8) * (1 - t * 0.3);
+      final px =
+          startX +
+          direction * size.width * 0.18 * sin(t * pi * 0.8) * (1 - t * 0.3);
 
       _drawLeaf(canvas, px, py, direction, t, size, paint);
     }
   }
 
-  void _drawLeaf(Canvas canvas, double x, double y, double dir, double t, Size size, Paint paint) {
+  void _drawLeaf(
+    Canvas canvas,
+    double x,
+    double y,
+    double dir,
+    double t,
+    Size size,
+    Paint paint,
+  ) {
     final leafSize = size.width * 0.05 * (1 - t * 0.3);
     final angle = dir * (0.4 + t * 0.3);
 
@@ -239,20 +338,18 @@ class LaurelWreathPainter extends CustomPainter {
       leafSize * 1.2 * dir,
       -leafSize * 0.3,
     );
-    leafPath.quadraticBezierTo(
-      leafSize * 0.5 * dir,
-      leafSize * 0.2,
-      0,
-      0,
-    );
+    leafPath.quadraticBezierTo(leafSize * 0.5 * dir, leafSize * 0.2, 0, 0);
 
     final leafPaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          AppColors.goldLight.withValues(alpha: 0.8),
-          AppColors.goldDark.withValues(alpha: 0.6),
-        ],
-      ).createShader(Rect.fromLTWH(-leafSize, -leafSize, leafSize * 3, leafSize * 2));
+      ..shader =
+          LinearGradient(
+            colors: [
+              AppColors.goldLight.withValues(alpha: 0.8),
+              AppColors.goldDark.withValues(alpha: 0.6),
+            ],
+          ).createShader(
+            Rect.fromLTWH(-leafSize, -leafSize, leafSize * 3, leafSize * 2),
+          );
 
     canvas.drawPath(leafPath, leafPaint);
     canvas.restore();

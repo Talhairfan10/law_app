@@ -31,9 +31,10 @@ class _GoldButtonState extends State<GoldButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.97,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -46,10 +47,8 @@ class _GoldButtonState extends State<GoldButton>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _scaleAnimation.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: _scaleAnimation.value, child: child),
       child: GestureDetector(
         onTapDown: (_) {
           setState(() => _isPressed = true);
@@ -72,7 +71,9 @@ class _GoldButtonState extends State<GoldButton>
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: AppColors.goldPrimary.withValues(alpha: _isPressed ? 0.2 : 0.35),
+                color: AppColors.goldPrimary.withValues(
+                  alpha: _isPressed ? 0.2 : 0.35,
+                ),
                 blurRadius: _isPressed ? 8 : 16,
                 offset: const Offset(0, 4),
                 spreadRadius: _isPressed ? 0 : 2,
@@ -148,9 +149,10 @@ class _GoldOutlineButtonState extends State<GoldOutlineButton>
       duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.97,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -163,10 +165,8 @@ class _GoldOutlineButtonState extends State<GoldOutlineButton>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _scaleAnimation,
-      builder: (context, child) => Transform.scale(
-        scale: _scaleAnimation.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.scale(scale: _scaleAnimation.value, child: child),
       child: GestureDetector(
         onTapDown: (_) {
           setState(() => _isPressed = true);
@@ -197,11 +197,7 @@ class _GoldOutlineButtonState extends State<GoldOutlineButton>
           child: Row(
             children: [
               const SizedBox(width: 24),
-              Icon(
-                widget.leadingIcon,
-                color: AppColors.goldPrimary,
-                size: 24,
-              ),
+              Icon(widget.leadingIcon, color: AppColors.goldPrimary, size: 24),
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
@@ -266,10 +262,7 @@ class _SocialButtonState extends State<SocialButton> {
               ? Colors.white.withValues(alpha: 0.9)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Colors.transparent,
-            width: 0,
-          ),
+          border: Border.all(color: Colors.transparent, width: 0),
           boxShadow: [
             if (!_isPressed)
               BoxShadow(
@@ -279,11 +272,7 @@ class _SocialButtonState extends State<SocialButton> {
               ),
           ],
         ),
-        child: Icon(
-          widget.icon,
-          color: widget.iconColor,
-          size: 24,
-        ),
+        child: Icon(widget.icon, color: widget.iconColor, size: 24),
       ),
     );
   }

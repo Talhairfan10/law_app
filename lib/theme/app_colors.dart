@@ -31,42 +31,26 @@ class AppColors {
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFF1A1530),
-      Color(0xFF0D0B1A),
-      Color(0xFF0A0816),
-    ],
+    colors: [Color(0xFF1A1530), Color(0xFF0D0B1A), Color(0xFF0A0816)],
     stops: [0.0, 0.5, 1.0],
   );
 
   static const LinearGradient goldButtonGradient = LinearGradient(
     begin: Alignment.centerLeft,
     end: Alignment.centerRight,
-    colors: [
-      Color(0xFFD4A843),
-      Color(0xFFE8C96A),
-      Color(0xFFD4A843),
-    ],
+    colors: [Color(0xFFD4A843), Color(0xFFE8C96A), Color(0xFFD4A843)],
   );
 
   static const LinearGradient goldShieldGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Color(0xFFE8C96A),
-      Color(0xFFD4A843),
-      Color(0xFFB8892E),
-    ],
+    colors: [Color(0xFFE8C96A), Color(0xFFD4A843), Color(0xFFB8892E)],
   );
 
   static const LinearGradient heroOverlayGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [
-      Colors.transparent,
-      Color(0xCC0D0B1A),
-      Color(0xFF0D0B1A),
-    ],
+    colors: [Colors.transparent, Color(0xCC0D0B1A), Color(0xFF0D0B1A)],
     stops: [0.0, 0.6, 1.0],
   );
 }

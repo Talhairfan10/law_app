@@ -13,7 +13,9 @@ class OnboardingPage2 extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F4F8), // Slightly darker so white cards pop
+      backgroundColor: const Color(
+        0xFFF5F4F8,
+      ), // Slightly darker so white cards pop
       body: SafeArea(
         child: Column(
           children: [
@@ -52,7 +54,7 @@ class OnboardingPage2 extends StatelessWidget {
                             ),
                           ),
                         ),
-                        
+
                         // Text Content
                         Positioned(
                           left: 24,
@@ -209,7 +211,11 @@ class OnboardingPage2 extends StatelessWidget {
                   Positioned(
                     top: 0,
                     left: 0,
-                    child: Icon(mainIcon, color: const Color(0xFF3B2A70), size: 28),
+                    child: Icon(
+                      mainIcon,
+                      color: const Color(0xFF3B2A70),
+                      size: 28,
+                    ),
                   ),
                   Positioned(
                     bottom: 0,
@@ -220,7 +226,11 @@ class OnboardingPage2 extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       padding: const EdgeInsets.all(1),
-                      child: Icon(subIcon, color: const Color(0xFFD4A843), size: 14),
+                      child: Icon(
+                        subIcon,
+                        color: const Color(0xFFD4A843),
+                        size: 14,
+                      ),
                     ),
                   ),
                 ],
@@ -412,10 +422,7 @@ class OnboardingPage2 extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF2E1C60),
-                width: 1,
-              ),
+              border: Border.all(color: const Color(0xFF2E1C60), width: 1),
             ),
             child: Material(
               color: Colors.transparent,

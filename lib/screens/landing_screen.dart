@@ -52,15 +52,13 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     );
 
-    _titleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: const Interval(0.15, 0.55, curve: Curves.easeOutCubic),
-      ),
-    );
+    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: const Interval(0.15, 0.55, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _subtitleFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
@@ -69,15 +67,13 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     );
 
-    _subtitleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: const Interval(0.3, 0.65, curve: Curves.easeOutCubic),
-      ),
-    );
+    _subtitleSlide =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: const Interval(0.3, 0.65, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _buttonsFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
@@ -86,15 +82,13 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     );
 
-    _buttonsSlide = Tween<Offset>(
-      begin: const Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
-      ),
-    );
+    _buttonsSlide = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: const Interval(0.55, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _fadeController.forward();
     _slideController.forward();
@@ -121,7 +115,7 @@ class _LandingScreenState extends State<LandingScreen>
               alignment: Alignment.bottomCenter,
             ),
           ),
-          
+
           // Dark Overlay to match the deep purple tint
           Positioned.fill(
             child: Container(
@@ -183,10 +177,7 @@ class _LandingScreenState extends State<LandingScreen>
   }
 
   Widget _buildLogoSection() {
-    return FadeTransition(
-      opacity: _logoFade,
-      child: MashviraLogo(size: 160),
-    );
+    return FadeTransition(opacity: _logoFade, child: MashviraLogo(size: 160));
   }
 
   Widget _buildTitleSection() {
@@ -383,4 +374,3 @@ class _LandingScreenState extends State<LandingScreen>
     );
   }
 }
-

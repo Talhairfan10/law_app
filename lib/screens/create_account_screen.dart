@@ -43,15 +43,13 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
         curve: const Interval(0.0, 0.45, curve: Curves.easeOut),
       ),
     );
-    _headerSlide = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
-      ),
-    );
+    _headerSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: const Interval(0.0, 0.45, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _cardFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
@@ -59,15 +57,13 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
         curve: const Interval(0.2, 0.65, curve: Curves.easeOut),
       ),
     );
-    _cardSlide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _slideController,
-        curve: const Interval(0.2, 0.65, curve: Curves.easeOutCubic),
-      ),
-    );
+    _cardSlide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _slideController,
+            curve: const Interval(0.2, 0.65, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _featuresFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
@@ -124,11 +120,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                   return const LinearGradient(
                     begin: Alignment.centerRight,
                     end: Alignment.centerLeft,
-                    colors: [
-                      Colors.white,
-                      Colors.white,
-                      Colors.transparent,
-                    ],
+                    colors: [Colors.white, Colors.white, Colors.transparent],
                     stops: [0.0, 0.6, 1.0],
                   ).createShader(rect);
                 },
@@ -138,11 +130,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                     return const LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.white,
-                        Colors.white,
-                        Colors.transparent,
-                      ],
+                      colors: [Colors.white, Colors.white, Colors.transparent],
                       stops: [0.0, 0.5, 1.0],
                     ).createShader(rect);
                   },
@@ -187,10 +175,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
               children: [
                 // ── Back button ──
                 Padding(
-                  padding: EdgeInsets.only(
-                    left: 20,
-                    top: screenHeight * 0.01,
-                  ),
+                  padding: EdgeInsets.only(left: 20, top: screenHeight * 0.01),
                   child: _buildBackButton(),
                 ),
 
@@ -208,8 +193,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                   ),
                 ),
 
-                SizedBox(height: screenHeight * 0.02), // Reduced spacing to avoid overflow
-
+                SizedBox(
+                  height: screenHeight * 0.02,
+                ), // Reduced spacing to avoid overflow
                 // ── Bottom card container ──
                 Expanded(
                   child: FadeTransition(
@@ -232,16 +218,10 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
   Widget _buildBackButton() {
     return IconButton(
       onPressed: () => Navigator.of(context).pop(),
-      icon: const Icon(
-        Icons.arrow_back_rounded,
-        color: Colors.white,
-        size: 28,
-      ),
+      icon: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 28),
       style: IconButton.styleFrom(
         backgroundColor: AppColors.backgroundLight.withValues(alpha: 0.25),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         padding: const EdgeInsets.all(12),
       ),
     );
@@ -284,11 +264,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
               // Original Divider: longer gold line, centered gold dot, second gold line
               Row(
                 children: [
-                  Container(
-                    width: 45,
-                    height: 2,
-                    color: AppColors.goldPrimary,
-                  ),
+                  Container(width: 45, height: 2, color: AppColors.goldPrimary),
                   const SizedBox(width: 8),
                   Container(
                     width: 6,
@@ -333,10 +309,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
             alignment: Alignment.topRight,
             child: Padding(
               padding: const EdgeInsets.only(top: 10),
-              child: MashviraLogo(
-                size: screenHeight * 0.16,
-                showText: false,
-              ),
+              child: MashviraLogo(size: screenHeight * 0.16, showText: false),
             ),
           ),
         ),
@@ -401,7 +374,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                         icon: Icons.mail_outline_rounded,
                         iconColor: AppColors.goldPrimary,
                         iconBackgroundColor: Colors.transparent,
-                        iconBorderColor: AppColors.goldPrimary.withValues(alpha: 0.5),
+                        iconBorderColor: AppColors.goldPrimary.withValues(
+                          alpha: 0.5,
+                        ),
                         label: 'Create Account with Email',
                         onPressed: () {
                           // TODO: Navigate to email sign-up
