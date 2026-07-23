@@ -136,39 +136,51 @@ class _LandingScreenState extends State<LandingScreen>
           ),
 
           SafeArea(
-            child: Column(
-              children: [
-                const Spacer(flex: 2),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        children: [
+                          const Spacer(flex: 2),
 
-                // ── Logo Section ──
-                _buildLogoSection(),
+                          // ── Logo Section ──
+                          _buildLogoSection(),
 
-                const Spacer(flex: 2),
+                          const Spacer(flex: 2),
 
-                // ── Title Section ──
-                _buildTitleSection(),
+                          // ── Title Section ──
+                          _buildTitleSection(),
 
-                const Spacer(flex: 1),
+                          const Spacer(flex: 1),
 
-                // ── Subtitle Section ──
-                _buildSubtitleSection(),
+                          // ── Subtitle Section ──
+                          _buildSubtitleSection(),
 
-                // ── Background shows gavel/books here ──
-                const Spacer(flex: 12),
+                          // ── Background shows gavel/books here ──
+                          const Spacer(flex: 12),
 
-                // ── Action Buttons ──
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: _buildActionButtons(),
-                ),
+                          // ── Action Buttons ──
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: _buildActionButtons(),
+                          ),
 
-                const Spacer(flex: 1),
+                          const Spacer(flex: 1),
 
-                // ── Social Login ──
-                _buildSocialLogin(),
+                          // ── Social Login ──
+                          _buildSocialLogin(),
 
-                const Spacer(flex: 2),
-              ],
+                          const Spacer(flex: 2),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],
