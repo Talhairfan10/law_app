@@ -21,7 +21,6 @@ class _LandingScreenState extends State<LandingScreen>
   late Animation<Offset> _titleSlide;
   late Animation<double> _subtitleFade;
   late Animation<Offset> _subtitleSlide;
-  late Animation<double> _heroFade;
   late Animation<double> _buttonsFade;
   late Animation<Offset> _buttonsSlide;
 
@@ -80,13 +79,6 @@ class _LandingScreenState extends State<LandingScreen>
       ),
     );
 
-    _heroFade = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.35, 0.75, curve: Curves.easeOut),
-      ),
-    );
-
     _buttonsFade = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _fadeController,
@@ -117,9 +109,6 @@ class _LandingScreenState extends State<LandingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final screenWidth = MediaQuery.of(context).size.width;
-
     return Scaffold(
       backgroundColor: Colors.black, // fallback
       body: Stack(
@@ -294,31 +283,6 @@ class _LandingScreenState extends State<LandingScreen>
               height: 1.6,
               letterSpacing: 0.2,
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeroIllustration(double screenWidth) {
-    return FadeTransition(
-      opacity: _heroFade,
-      child: ShaderMask(
-        shaderCallback: (rect) {
-          return const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.center,
-            colors: [Colors.transparent, Colors.black],
-            stops: [0.0, 0.4],
-          ).createShader(rect);
-        },
-        blendMode: BlendMode.dstIn,
-        child: SizedBox(
-          width: screenWidth,
-          child: Image.asset(
-            'assets/images/hero.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.bottomCenter,
           ),
         ),
       ),
