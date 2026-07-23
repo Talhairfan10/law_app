@@ -18,122 +18,119 @@ class OnboardingPage2 extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Top Section (Title + Description + Hero Image via Stack) ──
-                    SizedBox(
-                      height: screenHeight * 0.42,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Background Image / Hero Image with seamless blend
-                          Positioned(
-                            right: -screenWidth * 0.15,
-                            top: 0,
-                            bottom: 0,
-                            child: SizedBox(
-                              width: screenWidth * 0.75,
-                              child: ShaderMask(
-                                shaderCallback: (rect) {
-                                  return const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.center,
-                                    colors: [Colors.transparent, Colors.white],
-                                    stops: [0.0, 0.5],
-                                  ).createShader(rect);
-                                },
-                                blendMode: BlendMode.dstIn,
-                                child: Image.asset(
-                                  'assets/images/page2_hero.png',
-                                  fit: BoxFit.cover,
-                                  alignment: Alignment.centerLeft,
-                                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Top Section (Title + Description + Hero Image via Stack) ──
+                  Expanded(
+                    flex: 42,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Background Image / Hero Image with seamless blend
+                        Positioned(
+                          right: -screenWidth * 0.15,
+                          top: 0,
+                          bottom: 0,
+                          child: SizedBox(
+                            width: screenWidth * 0.75,
+                            child: ShaderMask(
+                              shaderCallback: (rect) {
+                                return const LinearGradient(
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.center,
+                                  colors: [Colors.transparent, Colors.white],
+                                  stops: [0.0, 0.5],
+                                ).createShader(rect);
+                              },
+                              blendMode: BlendMode.dstIn,
+                              child: Image.asset(
+                                'assets/images/page2_hero.png',
+                                fit: BoxFit.cover,
+                                alignment: Alignment.centerLeft,
                               ),
                             ),
                           ),
-                          
-                          // Text Content
-                          Positioned(
-                            left: 24,
-                            top: screenHeight * 0.04,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Title
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'Legal Support\nMade ',
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF101018),
-                                          height: 1.25,
-                                        ),
+                        ),
+                        
+                        // Text Content
+                        Positioned(
+                          left: 24,
+                          top: screenHeight * 0.04,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Title
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'Legal Support\nMade ',
+                                      style: GoogleFonts.playfairDisplay(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF101018),
+                                        height: 1.25,
                                       ),
-                                      TextSpan(
-                                        text: 'Simple,\n',
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFFD4A843),
-                                          height: 1.25,
-                                        ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Simple,\n',
+                                      style: GoogleFonts.playfairDisplay(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFD4A843),
+                                        height: 1.25,
                                       ),
-                                      TextSpan(
-                                        text: 'Justice Made Easy.',
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF101018),
-                                          height: 1.25,
-                                        ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Justice Made Easy.',
+                                      style: GoogleFonts.playfairDisplay(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF101018),
+                                        height: 1.25,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 12),
-                                // Gold Line
-                                Container(
-                                  width: 35,
-                                  height: 2.5,
-                                  color: const Color(0xFFD4A843),
+                              ),
+                              const SizedBox(height: 12),
+                              // Gold Line
+                              Container(
+                                width: 35,
+                                height: 2.5,
+                                color: const Color(0xFFD4A843),
+                              ),
+                              const SizedBox(height: 24),
+                              // Description
+                              Text(
+                                'Describe your legal issue,\nwe handle the rest.\n\nQualified lawyers.\nTransparent process.\nBetter outcomes.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFF4A4A5A),
+                                  height: 1.6,
                                 ),
-                                const SizedBox(height: 24),
-                                // Description
-                                Text(
-                                  'Describe your legal issue,\nwe handle the rest.\n\nQualified lawyers.\nTransparent process.\nBetter outcomes.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: const Color(0xFF4A4A5A),
-                                    height: 1.6,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    SizedBox(height: screenHeight * 0.01),
+                  Spacer(flex: 1),
 
-                    // ── Feature Cards ──
-                    _buildFeatureCards(),
+                  // ── Feature Cards ──
+                  _buildFeatureCards(),
 
-                    SizedBox(height: screenHeight * 0.025),
+                  Spacer(flex: 2),
 
-                    // ── Purple Mashvira Banner ──
-                    _buildMashviraBanner(),
+                  // ── Purple Mashvira Banner ──
+                  _buildMashviraBanner(),
 
-                    SizedBox(height: screenHeight * 0.02),
-                  ],
-                ),
+                  Spacer(flex: 2),
+                ],
               ),
             ),
 

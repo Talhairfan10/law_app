@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/gold_buttons.dart';
 import '../widgets/mashvira_logo.dart';
+import 'create_account_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -126,8 +127,9 @@ class _LandingScreenState extends State<LandingScreen>
           // Fullscreen Background
           Positioned.fill(
             child: Image.asset(
-              'assets/images/bg.png',
+              'assets/images/bg_gavel.png',
               fit: BoxFit.cover,
+              alignment: Alignment.bottomCenter,
             ),
           ),
           
@@ -140,60 +142,50 @@ class _LandingScreenState extends State<LandingScreen>
                   end: Alignment.bottomCenter,
                   colors: [
                     const Color(0xFF13092A).withValues(alpha: 0.85),
-                    const Color(0xFF13092A).withValues(alpha: 0.5),
-                    const Color(0xFF180A22).withValues(alpha: 0.95),
+                    const Color(0xFF13092A).withValues(alpha: 0.6),
+                    const Color(0xFF13092A).withValues(alpha: 0.15),
+                    Colors.transparent,
                   ],
+                  stops: const [0.0, 0.35, 0.6, 0.75],
                 ),
               ),
             ),
           ),
 
           SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: screenHeight - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+
+                // ── Logo Section ──
+                _buildLogoSection(),
+
+                const Spacer(flex: 2),
+
+                // ── Title Section ──
+                _buildTitleSection(),
+
+                const Spacer(flex: 1),
+
+                // ── Subtitle Section ──
+                _buildSubtitleSection(),
+
+                // ── Background shows gavel/books here ──
+                const Spacer(flex: 12),
+
+                // ── Action Buttons ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildActionButtons(),
                 ),
-                child: Column(
-                  children: [
-                    SizedBox(height: screenHeight * 0.05),
 
-                    // ── Logo Section ──
-                    _buildLogoSection(),
+                const Spacer(flex: 1),
 
-                    SizedBox(height: screenHeight * 0.03),
+                // ── Social Login ──
+                _buildSocialLogin(),
 
-                    // ── Title Section ──
-                    _buildTitleSection(),
-
-                    SizedBox(height: screenHeight * 0.02),
-
-                    // ── Subtitle Section ──
-                    _buildSubtitleSection(),
-
-                    SizedBox(height: screenHeight * 0.02),
-
-                    // ── Hero Illustration (Gavel) ──
-                    _buildHeroIllustration(screenWidth),
-
-                    SizedBox(height: screenHeight * 0.02),
-
-                    // ── Action Buttons ──
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 28),
-                      child: _buildActionButtons(),
-                    ),
-
-                    SizedBox(height: screenHeight * 0.03),
-
-                    // ── Social Login ──
-                    _buildSocialLogin(),
-
-                    SizedBox(height: screenHeight * 0.04),
-                  ],
-                ),
-              ),
+                const Spacer(flex: 2),
+              ],
             ),
           ),
         ],
@@ -204,18 +196,7 @@ class _LandingScreenState extends State<LandingScreen>
   Widget _buildLogoSection() {
     return FadeTransition(
       opacity: _logoFade,
-      child: Column(
-        children: [
-          // Custom drawn vector logo perfectly matching the original
-          const MashviraLogo(size: 140),
-          // Subtitle with decorative dashes (matching reference)
-          const SizedBox(height: 8),
-          // The logo image contains the text, but wait, if it doesn't we can render it.
-          // Let's assume the logo image is just the shield, or it contains text.
-          // The reference has text below the shield. Our generated logo might have text in it.
-          // I will just let the image render itself. If it needs text, I can add it, but our prompt asked for text.
-        ],
-      ),
+      child: MashviraLogo(size: 160),
     );
   }
 
@@ -334,7 +315,6 @@ class _LandingScreenState extends State<LandingScreen>
         blendMode: BlendMode.dstIn,
         child: SizedBox(
           width: screenWidth,
-          height: screenWidth * 0.65,
           child: Image.asset(
             'assets/images/hero.png',
             fit: BoxFit.cover,
@@ -355,7 +335,14 @@ class _LandingScreenState extends State<LandingScreen>
             GoldButton(
               label: 'Get Started',
               leadingIcon: Icons.balance_rounded,
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CreateAccountScreen(),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 14),
             GoldOutlineButton(
@@ -376,12 +363,28 @@ class _LandingScreenState extends State<LandingScreen>
         position: _buttonsSlide,
         child: Column(
           children: [
-            Text(
-              'or continue with',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: Colors.white54,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Divider(color: Colors.white24, thickness: 1),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      'or continue with',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white54,
+                      ),
+                    ),
+                  ),
+                  const Expanded(
+                    child: Divider(color: Colors.white24, thickness: 1),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),

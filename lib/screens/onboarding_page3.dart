@@ -17,124 +17,121 @@ class OnboardingPage3 extends StatelessWidget {
         child: Column(
           children: [
             Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Top Section (Logo, Phone Image, Text) ──
-                    SizedBox(
-                      height: screenHeight * 0.48,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          // Phone Mockup Image on the right
-                          Positioned(
-                            right: -screenWidth * 0.05,
-                            top: 0,
-                            bottom: -20,
-                            child: SizedBox(
-                              width: screenWidth * 0.65,
-                              child: Image.asset(
-                                'assets/images/phone_mockup.png',
-                                fit: BoxFit.contain,
-                                alignment: Alignment.topRight,
-                                // Using errorBuilder in case they haven't added it yet
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey.shade200,
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: const Center(
-                                    child: Text(
-                                      'Add\nphone_mockup.png\nto assets/images',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(fontSize: 10, color: Colors.grey),
-                                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Top Section (Logo, Phone Image, Text) ──
+                  Expanded(
+                    flex: 48,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        // Phone Mockup Image on the right
+                        Positioned(
+                          right: -screenWidth * 0.05,
+                          top: 0,
+                          bottom: -20,
+                          child: SizedBox(
+                            width: screenWidth * 0.65,
+                            child: Image.asset(
+                              'assets/images/phone_mockup.png',
+                              fit: BoxFit.contain,
+                              alignment: Alignment.topRight,
+                              // Using errorBuilder in case they haven't added it yet
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Add\nphone_mockup.png\nto assets/images',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 10, color: Colors.grey),
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                        ),
 
-                          // Left side content
-                          Positioned(
-                            left: 24,
-                            top: 10,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Logo
-                                SizedBox(
-                                  width: 100,
-                                  height: 100,
-                                  child: Image.asset(
-                                    'assets/images/logo.png',
-                                    fit: BoxFit.contain,
-                                  ),
+                        // Left side content
+                        Positioned(
+                          left: 24,
+                          top: 10,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Logo
+                              SizedBox(
+                                width: 100,
+                                height: 100,
+                                child: Image.asset(
+                                  'assets/images/logo.png',
+                                  fit: BoxFit.contain,
                                 ),
-                                const SizedBox(height: 24),
-                                
-                                // Title
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'Your Case.\nOur ',
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFF101018),
-                                          height: 1.25,
-                                        ),
+                              ),
+                              const SizedBox(height: 24),
+                              
+                              // Title
+                              RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'Your Case.\nOur ',
+                                      style: GoogleFonts.playfairDisplay(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFF101018),
+                                        height: 1.25,
                                       ),
-                                      TextSpan(
-                                        text: 'Responsibility.',
-                                        style: GoogleFonts.playfairDisplay(
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: const Color(0xFFD4A843),
-                                          height: 1.25,
-                                        ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Responsibility.',
+                                      style: GoogleFonts.playfairDisplay(
+                                        fontSize: 32,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFD4A843),
+                                        height: 1.25,
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 16),
-                                
-                                // Description
-                                Text(
-                                  'From case intake to resolution,\nwe manage everything with\ncare, transparency and\nexpertise.',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: const Color(0xFF4A4A5A),
-                                    height: 1.6,
-                                  ),
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              // Description
+                              Text(
+                                'From case intake to resolution,\nwe manage everything with\ncare, transparency and\nexpertise.',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: const Color(0xFF4A4A5A),
+                                  height: 1.6,
                                 ),
-                                const SizedBox(height: 20),
-                                
-                                // Purple Line
-                                Container(
-                                  width: 40,
-                                  height: 3,
-                                  color: const Color(0xFF2E1C60),
-                                ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: 20),
+                              
+                              // Purple Line
+                              Container(
+                                width: 40,
+                                height: 3,
+                                color: const Color(0xFF2E1C60),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                  ),
 
-                    SizedBox(height: screenHeight * 0.02),
+                  Spacer(flex: 2),
 
-                    // ── Why Choose Banner ──
-                    _buildWhyChooseBanner(),
+                  // ── Why Choose Banner ──
+                  _buildWhyChooseBanner(),
 
-                    SizedBox(height: screenHeight * 0.025),
-                  ],
-                ),
+                  Spacer(flex: 2),
+                ],
               ),
             ),
 

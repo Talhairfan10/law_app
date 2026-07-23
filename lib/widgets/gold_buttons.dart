@@ -68,7 +68,7 @@ class _GoldButtonState extends State<GoldButton>
           width: double.infinity,
           height: 58,
           decoration: BoxDecoration(
-            gradient: AppColors.goldButtonGradient,
+            color: AppColors.goldPrimary,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -86,20 +86,11 @@ class _GoldButtonState extends State<GoldButton>
           ),
           child: Row(
             children: [
-              const SizedBox(width: 20),
-              // Leading icon with subtle background
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundDark.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  widget.leadingIcon,
-                  color: AppColors.backgroundDark.withValues(alpha: 0.8),
-                  size: 20,
-                ),
+              const SizedBox(width: 24),
+              Icon(
+                widget.leadingIcon,
+                color: AppColors.backgroundDark.withValues(alpha: 0.8),
+                size: 24,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -113,20 +104,12 @@ class _GoldButtonState extends State<GoldButton>
                   ),
                 ),
               ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.backgroundDark.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.arrow_forward_rounded,
-                  color: AppColors.backgroundDark.withValues(alpha: 0.7),
-                  size: 20,
-                ),
+              Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.backgroundDark.withValues(alpha: 0.7),
+                size: 20,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 24),
             ],
           ),
         ),
@@ -213,20 +196,11 @@ class _GoldOutlineButtonState extends State<GoldOutlineButton>
           ),
           child: Row(
             children: [
-              const SizedBox(width: 20),
-              // Leading icon
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.goldPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  widget.leadingIcon,
-                  color: AppColors.goldPrimary,
-                  size: 20,
-                ),
+              const SizedBox(width: 24),
+              Icon(
+                widget.leadingIcon,
+                color: AppColors.goldPrimary,
+                size: 24,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -240,20 +214,12 @@ class _GoldOutlineButtonState extends State<GoldOutlineButton>
                   ),
                 ),
               ),
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: AppColors.goldPrimary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.arrow_forward_rounded,
-                  color: AppColors.goldPrimary,
-                  size: 20,
-                ),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: AppColors.goldPrimary,
+                size: 20,
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 24),
             ],
           ),
         ),
