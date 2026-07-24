@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
 import '../widgets/sign_up_option_button.dart';
+import 'signup_form_screen.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -379,7 +380,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                         ),
                         label: 'Create Account with Email',
                         onPressed: () {
-                          // TODO: Navigate to email sign-up
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SignupFormScreen(),
+                            ),
+                          );
                         },
                       ),
 
