@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
+import '../services/auth_service.dart';
 import 'verify_phone_screen.dart';
+import 'complete_profile_screen.dart';
 
 class SignupFormScreen extends StatefulWidget {
   const SignupFormScreen({super.key});
@@ -15,9 +18,172 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreedToTerms = true;
+  bool _isLoading = false;
+
+  final String _selectedCountryCode = '+92';
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  /// Validates all form fields and returns null if valid, or an error message string.
+  String? _validateFields() {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (name.isEmpty) return 'Please enter your full name.';
+    if (email.isEmpty) return 'Please enter your email address.';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      return 'Please enter a valid email address.';
+    }
+    if (phone.isEmpty) return 'Please enter your phone number.';
+    if (password.isEmpty) return 'Please enter a password.';
+    if (password.length < 6) return 'Password must be at least 6 characters.';
+    if (password != confirmPassword) return 'Passwords do not match.';
+    if (!_agreedToTerms) return 'Please agree to the Terms of Service and Privacy Policy.';
+
+    return null;
+  }
+
+  /// Initiates Firebase phone verification flow.
+  Future<void> _startPhoneVerification() async {
+    final validationError = _validateFields();
+    if (validationError != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(validationError)),
+      );
+      return;
+    }
+
+    final phone = _phoneController.text.trim();
+    final fullPhoneNumber = '$_selectedCountryCode$phone';
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await AuthService.verifyPhoneNumber(
+        phoneNumber: fullPhoneNumber,
+        onVerificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto-verification on Android — sign in automatically
+          try {
+            final user = await AuthService.signInWithPhoneCredential(credential);
+            if (user != null && mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompleteProfileScreen(
+                    fullName: name,
+                    email: email,
+                    phoneNumber: fullPhoneNumber,
+                    password: password,
+                  ),
+                ),
+              );
+            }
+          } on FirebaseAuthException catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+              );
+            }
+          }
+        },
+        onVerificationFailed: (FirebaseAuthException e) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+            );
+          }
+        },
+        onCodeSent: (String verificationId, int? resendToken) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VerifyPhoneScreen(
+                  phoneNumber: fullPhoneNumber,
+                  fullName: name,
+                  email: email,
+                  password: password,
+                  verificationId: verificationId,
+                  resendToken: resendToken,
+                ),
+              ),
+            );
+          }
+        },
+        onAutoRetrievalTimeout: (String verificationId) {
+          // Fallback — verificationId is already stored via codeSent
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to verify phone number: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  /// Google Sign-In handler (from social buttons at bottom of form).
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final user = await AuthService.signInWithGoogle();
+      if (user == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Google sign-in was cancelled.')),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CompleteProfileScreen(
+              fullName: user.displayName ?? '',
+              email: user.email ?? '',
+              phoneNumber: '',
+              isGoogleSignIn: true,
+            ),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +338,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         _buildPhoneInputField(),
                         const SizedBox(height: 16),
                         _buildInputField(
+                          controller: _passwordController,
                           label: 'Password',
                           hint: 'Create a strong password',
                           icon: Icons.lock_outline,
@@ -185,6 +352,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         ),
                         const SizedBox(height: 16),
                         _buildInputField(
+                          controller: _confirmPasswordController,
                           label: 'Confirm Password',
                           hint: 'Confirm your password',
                           icon: Icons.lock_outline,
@@ -271,22 +439,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          final phone = _phoneController.text.trim();
-                          final name = _nameController.text.trim();
-                          final email = _emailController.text.trim();
-                          
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => VerifyPhoneScreen(
-                                phoneNumber: '+92 ${phone.isEmpty ? "312 3456789" : phone}',
-                                fullName: name.isEmpty ? "Ali Hassan" : name,
-                                email: email.isEmpty ? "alihassan@gmail.com" : email,
-                              ),
-                            ),
-                          );
-                        },
+                        onPressed: _isLoading ? null : _startPhoneVerification,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -294,22 +447,31 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Spacer(),
-                            Text(
-                              'Continue',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Spacer(),
+                                  Text(
+                                    'Continue',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
+                                ],
                               ),
-                            ),
-                            const Spacer(),
-                            const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -354,7 +516,13 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
                       children: [
-                        Expanded(child: _buildSocialButton('Google', 'assets/images/google_logo.png')),
+                        Expanded(
+                          child: _buildSocialButton(
+                            'Google',
+                            'assets/images/google_logo.png',
+                            onTap: _handleGoogleSignIn,
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(child: _buildSocialButton('Apple', Icons.apple)),
                         const SizedBox(width: 12),
@@ -582,7 +750,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            '+92',
+                            _selectedCountryCode,
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               color: Colors.white,
@@ -624,34 +792,37 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
     );
   }
 
-  Widget _buildSocialButton(String label, dynamic iconOrPath, {Color? iconColor}) {
-    return Container(
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (iconOrPath is String)
-            Image.asset(iconOrPath, width: 20, height: 20)
-          else if (iconOrPath is IconData)
-            Icon(iconOrPath, color: iconColor ?? Colors.white, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Colors.white,
-            ),
+  Widget _buildSocialButton(String label, dynamic iconOrPath, {Color? iconColor, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (iconOrPath is String)
+              Image.asset(iconOrPath, width: 20, height: 20)
+            else if (iconOrPath is IconData)
+              Icon(iconOrPath, color: iconColor ?? Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

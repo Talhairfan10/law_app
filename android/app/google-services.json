@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "734708237577",
+    "project_id": "mashvira-law-house",
+    "storage_bucket": "mashvira-law-house.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734708237577:android:21f5cff0a604877dcabfd8",
+        "android_client_info": {
+          "package_name": "com.law.law_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "734708237577-0jr18nle22bjoqku15o8kfg8ofd26uu2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.law.law_app",
+            "certificate_hash": "17ede5049aaea44e1addf63032fa7690039437cd"
+          }
+        },
+        {
+          "client_id": "734708237577-00d5h1avs2i6ltf3a6l8gkl2dtd81eu4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9RYT0ffs_OiGoCFEyKhu60SQz62mTD3k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "734708237577-00d5h1avs2i6ltf3a6l8gkl2dtd81eu4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "734708237577-446ph6sf72pfe5evf9198qa50vanv69i.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.law.lawApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

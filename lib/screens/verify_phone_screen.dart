@@ -2,19 +2,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
+import '../services/auth_service.dart';
 import 'complete_profile_screen.dart';
 
 class VerifyPhoneScreen extends StatefulWidget {
   final String phoneNumber;
   final String fullName;
   final String email;
+  final String password;
+  final String verificationId;
+  final int? resendToken;
 
   const VerifyPhoneScreen({
     super.key,
     required this.phoneNumber,
     required this.fullName,
     required this.email,
+    required this.password,
+    required this.verificationId,
+    this.resendToken,
   });
 
   @override
@@ -28,9 +36,16 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   Timer? _timer;
   int _secondsRemaining = 180; // 3:00
 
+  late String _verificationId;
+  int? _resendToken;
+  bool _isVerifying = false;
+  bool _hasError = false;
+
   @override
   void initState() {
     super.initState();
+    _verificationId = widget.verificationId;
+    _resendToken = widget.resendToken;
     _startTimer();
     
     // Auto focus first node
@@ -40,6 +55,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_secondsRemaining > 0) {
         setState(() {
@@ -70,12 +86,147 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
   }
 
   void _onOtpChanged(String value, int index) {
+    // Clear error state on any new input
+    if (_hasError) {
+      setState(() => _hasError = false);
+    }
+
     if (value.isNotEmpty && index < 5) {
       FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
     } else if (value.isEmpty && index > 0) {
       FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
     }
     setState(() {}); // Trigger rebuild to update border highlight
+  }
+
+  /// Verifies the entered OTP code with Firebase.
+  Future<void> _verifyOtpCode() async {
+    final otp = _otpControllers.map((c) => c.text).join();
+    if (otp.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter all 6 digits')),
+      );
+      return;
+    }
+
+    setState(() {
+      _isVerifying = true;
+      _hasError = false;
+    });
+
+    try {
+      final user = await AuthService.verifyOtpCode(
+        verificationId: _verificationId,
+        smsCode: otp,
+      );
+
+      if (user != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CompleteProfileScreen(
+              phoneNumber: widget.phoneNumber,
+              fullName: widget.fullName,
+              email: widget.email,
+              password: widget.password,
+            ),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _hasError = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _hasError = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Verification failed: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  /// Resends the OTP code by re-initiating phone verification.
+  Future<void> _resendCode() async {
+    try {
+      await AuthService.verifyPhoneNumber(
+        phoneNumber: widget.phoneNumber,
+        forceResendingToken: _resendToken,
+        onVerificationCompleted: (PhoneAuthCredential credential) async {
+          // Auto-verification on Android
+          try {
+            final user = await AuthService.signInWithPhoneCredential(credential);
+            if (user != null && mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompleteProfileScreen(
+                    phoneNumber: widget.phoneNumber,
+                    fullName: widget.fullName,
+                    email: widget.email,
+                    password: widget.password,
+                  ),
+                ),
+              );
+            }
+          } on FirebaseAuthException catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+              );
+            }
+          }
+        },
+        onVerificationFailed: (FirebaseAuthException e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+            );
+          }
+        },
+        onCodeSent: (String verificationId, int? resendToken) {
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+              _resendToken = resendToken;
+              _secondsRemaining = 180;
+              _hasError = false;
+              // Clear OTP fields
+              for (var controller in _otpControllers) {
+                controller.clear();
+              }
+            });
+            _startTimer();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('A new verification code has been sent.')),
+            );
+          }
+        },
+        onAutoRetrievalTimeout: (String verificationId) {
+          if (mounted) {
+            setState(() {
+              _verificationId = verificationId;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to resend code: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -313,10 +464,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                                 ),
                                 GestureDetector(
                                   onTap: _secondsRemaining == 0 ? () {
-                                    setState(() {
-                                      _secondsRemaining = 180;
-                                      _startTimer();
-                                    });
+                                    _resendCode();
                                   } : null,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -413,27 +561,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          // Validate 6 digits
-                          String otp = _otpControllers.map((c) => c.text).join();
-                          if (otp.length == 6) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CompleteProfileScreen(
-                                  phoneNumber: widget.phoneNumber,
-                                  fullName: widget.fullName,
-                                  email: widget.email,
-                                ),
-                              ),
-                            );
-                          } else {
-                            // Show error/shake (omitted complex shake for simplicity, just a snackbar for now)
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please enter all 6 digits')),
-                            );
-                          }
-                        },
+                        onPressed: _isVerifying ? null : _verifyOtpCode,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -441,22 +569,31 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Spacer(),
-                            Text(
-                              'Verify & Continue',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                        child: _isVerifying
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Spacer(),
+                                  Text(
+                                    'Verify & Continue',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
+                                ],
                               ),
-                            ),
-                            const Spacer(),
-                            const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
-                          ],
-                        ),
                       ),
                     ),
                   ),
@@ -572,8 +709,12 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
         color: const Color(0xFF1E1530).withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: hasFocus ? AppColors.goldPrimary : Colors.white.withValues(alpha: 0.1),
-          width: hasFocus ? 1.5 : 1.0,
+          color: _hasError
+              ? Colors.red
+              : hasFocus
+                  ? AppColors.goldPrimary
+                  : Colors.white.withValues(alpha: 0.1),
+          width: (_hasError || hasFocus) ? 1.5 : 1.0,
         ),
       ),
       alignment: Alignment.center,
@@ -586,7 +727,11 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
         style: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w600,
-          color: hasText ? AppColors.goldPrimary : Colors.white,
+          color: _hasError
+              ? Colors.red
+              : hasText
+                  ? AppColors.goldPrimary
+                  : Colors.white,
         ),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: const InputDecoration(

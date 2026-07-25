@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
+import '../services/auth_service.dart';
+import 'welcome_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   final String fullName;
   final String email;
   final String phoneNumber;
+  final String password;
+  final bool isGoogleSignIn;
 
   const CompleteProfileScreen({
     super.key,
     required this.fullName,
     required this.email,
     required this.phoneNumber,
+    this.password = '',
+    this.isGoogleSignIn = false,
   });
 
   @override
@@ -23,11 +30,96 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   String _selectedLanguage = 'English';
   String? _selectedSource;
   final TextEditingController _otherSourceController = TextEditingController();
+  bool _isSaving = false;
 
   @override
   void dispose() {
     _otherSourceController.dispose();
     super.dispose();
+  }
+
+  /// Completes the registration: links email/password (if phone flow), saves profile to Firestore.
+  Future<void> _completeRegistration() async {
+    if (_selectedRole == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select if you are a Client or a Lawyer')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      // Step 1: Link email/password if user arrived via phone OTP flow
+      if (!widget.isGoogleSignIn && widget.password.isNotEmpty) {
+        try {
+          await AuthService.linkEmailPassword(
+            email: widget.email,
+            password: widget.password,
+          );
+        } on FirebaseAuthException catch (e) {
+          // If email-already-in-use, inform user but still allow profile save
+          if (e.code == 'email-already-in-use') {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+              );
+            }
+            // Don't block registration — the phone auth still works
+          } else if (e.code == 'provider-already-linked') {
+            // Already linked, continue silently
+          } else {
+            rethrow;
+          }
+        }
+      }
+
+      // Step 2: Determine howDidYouHear value
+      String howDidYouHear = _selectedSource ?? '';
+      if (_selectedSource == 'Other') {
+        howDidYouHear = _otherSourceController.text.trim().isNotEmpty
+            ? _otherSourceController.text.trim()
+            : 'Other';
+      }
+
+      // Step 3: Save profile data to Firestore
+      await AuthService.saveUserProfile(
+        fullName: widget.fullName,
+        email: widget.email,
+        phoneNumber: widget.phoneNumber,
+        userType: _selectedRole == 'client' ? 'Client' : 'Lawyer',
+        preferredLanguage: _selectedLanguage,
+        howDidYouHear: howDidYouHear,
+      );
+
+      // Step 4: Navigate to home and clear the auth navigation stack
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WelcomeScreen(fullName: widget.fullName),
+          ),
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration complete! Welcome to Mashvira Law House.')),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save profile: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -162,7 +254,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         const SizedBox(height: 12),
                         _buildSummaryCard(
                           label: 'Phone Number',
-                          value: widget.phoneNumber,
+                          value: widget.phoneNumber.isNotEmpty ? widget.phoneNumber : 'Not provided',
                           icon: Icons.phone_outlined,
                         ),
                       ],
@@ -337,18 +429,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: ElevatedButton(
-                        onPressed: () {
-                          if (_selectedRole == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please select if you are a Client or a Lawyer')),
-                            );
-                            return;
-                          }
-                          // Proceed to dashboard / complete flow
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Registration Complete!')),
-                          );
-                        },
+                        onPressed: _isSaving ? null : _completeRegistration,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -356,22 +437,31 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                             borderRadius: BorderRadius.circular(16),
                           ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Spacer(),
-                            Text(
-                              'Continue',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Spacer(),
+                                  Text(
+                                    'Continue',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
+                                ],
                               ),
-                            ),
-                            const Spacer(),
-                            const Icon(Icons.arrow_forward, color: Colors.black, size: 20),
-                          ],
-                        ),
                       ),
                     ),
                   ),

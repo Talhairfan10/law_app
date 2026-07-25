@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
 import '../widgets/sign_up_option_button.dart';
+import '../services/auth_service.dart';
 import 'signup_form_screen.dart';
+import 'complete_profile_screen.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -492,8 +495,45 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
           ),
           iconBackgroundColor: Colors.white,
           label: 'Continue with Google',
-          onPressed: () {
-            // TODO: Google sign-in
+          onPressed: () async {
+            try {
+              final user = await AuthService.signInWithGoogle();
+              if (user == null) {
+                // User cancelled
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Google sign-in was cancelled.')),
+                  );
+                }
+                return;
+              }
+              // Success — navigate directly to Complete Profile (skip Step 1 & 2)
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CompleteProfileScreen(
+                      fullName: user.displayName ?? '',
+                      email: user.email ?? '',
+                      phoneNumber: '',
+                      isGoogleSignIn: true,
+                    ),
+                  ),
+                );
+              }
+            } on FirebaseAuthException catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+                );
+              }
+            }
           },
         ),
         SizedBox(height: screenHeight * 0.01),
@@ -515,7 +555,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
           label: 'Continue with Phone Number',
           iconSize: 24,
           onPressed: () {
-            // TODO: Phone sign-in
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SignupFormScreen(),
+              ),
+            );
           },
         ),
       ],
