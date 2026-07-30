@@ -71,15 +71,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Debug android directory
-        run: |
-          pwd
-          ls -la android/
-          ls -la android/gradlew || echo "gradlew not found here"
-
       - name: Print debug keystore SHA fingerprints
         working-directory: android
-        run: sh gradlew signingReport
+        run: bash gradlew signingReport
 
       - name: Build Android APK
         run: flutter build apk --release
