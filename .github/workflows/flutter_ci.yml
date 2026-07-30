@@ -71,6 +71,17 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Generate debug keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          # Also copy to the alternate path Gradle may check on CI runners
+          mkdir -p ~/.config/.android
+          cp ~/.android/debug.keystore ~/.config/.android/debug.keystore
+
       - name: Print debug keystore SHA fingerprints
         working-directory: android
         run: bash gradlew signingReport
