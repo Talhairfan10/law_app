@@ -31,8 +31,17 @@ jobs:
 
       - name: Recreate Firebase config files
         run: |
-          echo "${{ secrets.GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
-          echo "${{ secrets.FIREBASE_OPTIONS_DART }}" > lib/firebase_options.dart
+          cat << 'EOF' > android/app/google-services.json
+          ${{ secrets.GOOGLE_SERVICES_JSON }}
+          EOF
+          cat << 'EOF' > lib/firebase_options.dart
+          ${{ secrets.FIREBASE_OPTIONS_DART }}
+          EOF
+
+      - name: Debug config files
+        run: |
+          cat lib/firebase_options.dart
+          wc -l lib/firebase_options.dart
 
       - name: Install dependencies
         run: flutter pub get
