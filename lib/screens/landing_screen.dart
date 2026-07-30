@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../widgets/gold_buttons.dart';
 import '../widgets/mashvira_logo.dart';
 import 'create_account_screen.dart';
+import 'login_screen.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -316,8 +317,11 @@ class _LandingScreenState extends State<LandingScreen>
               label: 'Login',
               leadingIcon: Icons.person_outline_rounded,
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Login coming soon.')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginScreen(),
+                  ),
                 );
               },
             ),
@@ -374,17 +378,7 @@ class _LandingScreenState extends State<LandingScreen>
                     );
                   },
                 ),
-                const SizedBox(width: 16),
-                // Apple
-                SocialButton(
-                  icon: Icons.apple_rounded,
-                  iconColor: Colors.black,
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Apple Sign-In coming soon.')),
-                    );
-                  },
-                ),
+
                 const SizedBox(width: 16),
                 // Phone
                 SocialButton(

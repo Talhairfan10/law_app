@@ -1,10 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  static Future<void> signOut() async {
+    await GoogleSignIn.instance.signOut();
+    await _auth.signOut();
+  }
 
   // ── Google Sign-In ──
   /// Returns the signed-in [User] on success, or null if cancelled.
@@ -15,14 +22,23 @@ class AuthService {
     final GoogleSignInAccount googleUser;
     try {
       googleUser = await GoogleSignIn.instance.authenticate();
-    } on GoogleSignInException {
+    } on GoogleSignInException catch (e) {
       // User cancelled or sign-in was interrupted
+      debugPrint('DEBUG GOOGLE SIGN-IN: GoogleSignInException: $e');
       return null;
+    } catch (e) {
+      debugPrint('DEBUG GOOGLE SIGN-IN: Unexpected error during authenticate(): $e');
+      debugPrint('DEBUG GOOGLE SIGN-IN: runtimeType=${e.runtimeType}');
+      if (e is PlatformException) {
+        debugPrint('DEBUG PLATFORM CODE: ${e.code}, DETAILS: ${e.details}, MESSAGE: ${e.message}');
+      }
+      rethrow;
     }
 
     // Obtain the auth details from the request
     // In google_sign_in v7, authentication only provides idToken
     final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+    debugPrint('DEBUG GOOGLE SIGN-IN: Got idToken=${googleAuth.idToken != null ? "present (${googleAuth.idToken!.length} chars)" : "NULL"}');
 
     // Create a new credential (only idToken needed for Firebase)
     final OAuthCredential credential = GoogleAuthProvider.credential(
@@ -30,60 +46,63 @@ class AuthService {
     );
 
     // Sign in to Firebase with the credential
-    final UserCredential userCredential =
-        await _auth.signInWithCredential(credential);
-
-    return userCredential.user;
+    try {
+      final UserCredential userCredential =
+          await _auth.signInWithCredential(credential);
+      debugPrint('DEBUG GOOGLE SIGN-IN: Firebase signInWithCredential succeeded, uid=${userCredential.user?.uid}');
+      return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('DEBUG GOOGLE SIGN-IN: FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('DEBUG GOOGLE SIGN-IN: signInWithCredential error: $e');
+      debugPrint('DEBUG GOOGLE SIGN-IN: runtimeType=${e.runtimeType}');
+      rethrow;
+    }
   }
 
-  // ── Phone Number Verification ──
-  /// Initiates phone number verification. [phoneNumber] must be in E.164 format.
-  static Future<void> verifyPhoneNumber({
-    required String phoneNumber,
-    required void Function(PhoneAuthCredential credential)
-        onVerificationCompleted,
-    required void Function(FirebaseAuthException e) onVerificationFailed,
-    required void Function(String verificationId, int? resendToken) onCodeSent,
-    required void Function(String verificationId) onAutoRetrievalTimeout,
-    int? forceResendingToken,
+  // ── Email & Password Sign Up ──
+  static Future<User?> signUpWithEmailPassword({
+    required String email,
+    required String password,
   }) async {
-    await _auth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: onVerificationCompleted,
-      verificationFailed: onVerificationFailed,
-      codeSent: onCodeSent,
-      codeAutoRetrievalTimeout: onAutoRetrievalTimeout,
-      forceResendingToken: forceResendingToken,
-      timeout: const Duration(seconds: 120),
-    );
+    try {
+      final UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      debugPrint('DEBUG EMAIL SIGN-UP: Succeeded for uid=${userCredential.user?.uid}');
+      return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('DEBUG EMAIL SIGN-UP: FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('DEBUG EMAIL SIGN-UP: Unexpected error: $e');
+      rethrow;
+    }
   }
 
-  // ── OTP Code Verification ──
-  /// Verifies the SMS code and signs in. Returns [User] on success.
-  /// Throws [FirebaseAuthException] on failure (wrong code, expired, etc.).
-  static Future<User?> verifyOtpCode({
-    required String verificationId,
-    required String smsCode,
+  // ── Email & Password Login ──
+  static Future<User?> signInWithEmailPassword({
+    required String email,
+    required String password,
   }) async {
-    final PhoneAuthCredential credential = PhoneAuthProvider.credential(
-      verificationId: verificationId,
-      smsCode: smsCode,
-    );
-
-    final UserCredential userCredential =
-        await _auth.signInWithCredential(credential);
-
-    return userCredential.user;
+    try {
+      final UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      debugPrint('DEBUG EMAIL LOGIN: Succeeded for uid=${userCredential.user?.uid}');
+      return userCredential.user;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('DEBUG EMAIL LOGIN: FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('DEBUG EMAIL LOGIN: Unexpected error: $e');
+      rethrow;
+    }
   }
 
-  // ── Auto-verify (Android auto-retrieval) ──
-  /// Signs in with a PhoneAuthCredential from auto-retrieval.
-  static Future<User?> signInWithPhoneCredential(
-      PhoneAuthCredential credential) async {
-    final UserCredential userCredential =
-        await _auth.signInWithCredential(credential);
-    return userCredential.user;
-  }
 
   // ── Link Email/Password to Current User ──
   /// Links an email/password credential to the currently signed-in user.
@@ -95,18 +114,29 @@ class AuthService {
   }) async {
     final user = _auth.currentUser;
     if (user == null) {
+      debugPrint('DEBUG LINK EMAIL: No current user!');
       throw FirebaseAuthException(
         code: 'no-current-user',
         message: 'No signed-in user found. Please sign in again.',
       );
     }
+    debugPrint('DEBUG LINK EMAIL: Linking email=$email to uid=${user.uid}');
 
     final credential = EmailAuthProvider.credential(
       email: email,
       password: password,
     );
 
-    await user.linkWithCredential(credential);
+    try {
+      await user.linkWithCredential(credential);
+      debugPrint('DEBUG LINK EMAIL: linkWithCredential succeeded');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('DEBUG LINK EMAIL: FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
+      rethrow;
+    } catch (e) {
+      debugPrint('DEBUG LINK EMAIL: Unexpected error: $e, runtimeType=${e.runtimeType}');
+      rethrow;
+    }
   }
 
   // ── Save User Profile to Firestore ──

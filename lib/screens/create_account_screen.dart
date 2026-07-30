@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
@@ -522,12 +523,18 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
                 );
               }
             } on FirebaseAuthException catch (e) {
+              debugPrint('DEBUG GOOGLE SIGN-IN (create_account): FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
                 );
               }
             } catch (e) {
+              debugPrint('DEBUG GOOGLE SIGN-IN (create_account): Unexpected error: $e');
+              debugPrint('DEBUG GOOGLE SIGN-IN (create_account): runtimeType=${e.runtimeType}');
+              if (e is PlatformException) {
+                debugPrint('DEBUG PLATFORM CODE: ${e.code}, DETAILS: ${e.details}, MESSAGE: ${e.message}');
+              }
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
@@ -536,35 +543,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
             }
           },
         ),
-        SizedBox(height: screenHeight * 0.01),
-        SignUpOptionButton(
-          icon: Icons.apple_rounded,
-          iconColor: Colors.white,
-          iconBackgroundColor: const Color(0xFF322A45),
-          label: 'Continue with Apple',
-          iconSize: 26,
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Apple Sign-In coming soon.')),
-            );
-          },
-        ),
-        SizedBox(height: screenHeight * 0.01),
-        SignUpOptionButton(
-          icon: Icons.phone_rounded,
-          iconColor: AppColors.purpleLight,
-          iconBackgroundColor: const Color(0xFF322A45),
-          label: 'Continue with Phone Number',
-          iconSize: 24,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const SignupFormScreen(),
-              ),
-            );
-          },
-        ),
+
       ],
     );
   }

@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'placeholders.dart';
+import '../services/auth_service.dart';
+import 'landing_screen.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -71,13 +73,52 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
-      drawer: const Drawer(
+      drawer: Drawer(
         child: SafeArea(
           child: Column(
             children: [
-              ListTile(
+              const ListTile(
                 title: Text('Menu Item 1'),
               ),
+              const Spacer(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                title: Text(
+                  'Logout',
+                  style: GoogleFonts.inter(color: Colors.redAccent, fontWeight: FontWeight.w600),
+                ),
+                onTap: () {
+                  Navigator.pop(context); // Close drawer
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Logout'),
+                      content: const Text('Are you sure you want to log out?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            Navigator.pop(context); // Close dialog
+                            await AuthService.signOut();
+                            if (context.mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const LandingScreen()),
+                                (route) => false,
+                              );
+                            }
+                          },
+                          child: const Text('Logout', style: TextStyle(color: Colors.redAccent)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

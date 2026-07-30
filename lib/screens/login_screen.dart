@@ -1,92 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
 import '../services/auth_service.dart';
+import 'home_dashboard_screen.dart';
 import 'complete_profile_screen.dart';
+import 'create_account_screen.dart';
 
-class SignupFormScreen extends StatefulWidget {
-  const SignupFormScreen({super.key});
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<SignupFormScreen> createState() => _SignupFormScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SignupFormScreenState extends State<SignupFormScreen> {
-  final TextEditingController _nameController = TextEditingController();
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _agreedToTerms = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  /// Validates all form fields and returns null if valid, or an error message string.
-  String? _validateFields() {
-    final name = _nameController.text.trim();
+  Future<void> _login() async {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    final confirmPassword = _confirmPasswordController.text;
 
-    if (name.isEmpty) return 'Please enter your full name.';
-    if (email.isEmpty) return 'Please enter your email address.';
-    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
-      return 'Please enter a valid email address.';
-    }
-    if (password.isEmpty) return 'Please enter a password.';
-    if (password.length < 6) return 'Password must be at least 6 characters.';
-    if (password != confirmPassword) return 'Passwords do not match.';
-    if (!_agreedToTerms) return 'Please agree to the Terms of Service and Privacy Policy.';
-
-    return null;
-  }
-
-  /// Initiates Email/Password sign up flow.
-  Future<void> _signUp() async {
-    final validationError = _validateFields();
-    if (validationError != null) {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(validationError)),
+        const SnackBar(content: Text('Please enter both email and password.')),
       );
       return;
     }
-    
-    final name = _nameController.text.trim();
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
 
     setState(() => _isLoading = true);
 
     try {
-      final user = await AuthService.signUpWithEmailPassword(
+      final user = await AuthService.signInWithEmailPassword(
         email: email,
         password: password,
       );
-      
+
       if (user != null && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CompleteProfileScreen(
-              fullName: name,
-              email: email,
-              phoneNumber: '',
-              password: password,
-            ),
-          ),
-        );
+        await _navigateBasedOnProfile(user);
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
@@ -97,7 +61,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign up: ${e.toString()}')),
+          SnackBar(content: Text('Login failed: ${e.toString()}')),
         );
       }
     } finally {
@@ -107,12 +71,13 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
     }
   }
 
-  /// Google Sign-In handler (from social buttons at bottom of form).
   Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
     try {
       final user = await AuthService.signInWithGoogle();
       if (user == null) {
         if (mounted) {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Google sign-in was cancelled.')),
           );
@@ -120,34 +85,57 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
         return;
       }
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CompleteProfileScreen(
-              fullName: user.displayName ?? '',
-              email: user.email ?? '',
-              phoneNumber: '',
-              isGoogleSignIn: true,
-            ),
-          ),
-        );
+        await _navigateBasedOnProfile(user);
       }
     } on FirebaseAuthException catch (e) {
-      debugPrint('DEBUG GOOGLE SIGN-IN (signup_form): FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
         );
       }
     } catch (e) {
-      debugPrint('DEBUG GOOGLE SIGN-IN (signup_form): Unexpected error: $e');
-      debugPrint('DEBUG GOOGLE SIGN-IN (signup_form): runtimeType=${e.runtimeType}');
-      if (e is PlatformException) {
-        debugPrint('DEBUG PLATFORM CODE: ${e.code}, DETAILS: ${e.details}, MESSAGE: ${e.message}');
-      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google sign-in failed: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _navigateBasedOnProfile(User user) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CompleteProfileScreen(
+                fullName: user.displayName ?? '',
+                email: user.email ?? '',
+                phoneNumber: '',
+                isGoogleSignIn: true,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load profile. Please try again.')),
         );
       }
     }
@@ -197,22 +185,17 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                   // Top Nav
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        Expanded(child: _buildProgressIndicator()),
-                      ],
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
                     ),
                   ),
 
                   // Hero Section
                   Padding(
-                    padding: const EdgeInsets.only(left: 28, right: 10, top: 10),
+                    padding: const EdgeInsets.only(left: 28, right: 10, top: 20),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -221,9 +204,8 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const SizedBox(height: 20),
                               Text(
-                                'Create Your',
+                                'Welcome',
                                 style: GoogleFonts.playfairDisplay(
                                   fontSize: 28,
                                   fontWeight: FontWeight.w700,
@@ -232,7 +214,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                                 ),
                               ),
                               Text(
-                                'Account',
+                                'Back',
                                 style: GoogleFonts.playfairDisplay(
                                   fontSize: 40,
                                   fontWeight: FontWeight.w800,
@@ -259,7 +241,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                               ),
                               const SizedBox(height: 24),
                               Text(
-                                'Fill in your details to create your\nMashvira Law House account.',
+                                'Login to access your cases and\nmanage your profile.',
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
@@ -281,20 +263,13 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
                   // Form Fields
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Column(
                       children: [
-                        _buildInputField(
-                          controller: _nameController,
-                          label: 'Full Name',
-                          hint: 'Enter your full name',
-                          icon: Icons.person_outline,
-                        ),
-                        const SizedBox(height: 16),
                         _buildInputField(
                           controller: _emailController,
                           label: 'Email Address',
@@ -306,7 +281,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         _buildInputField(
                           controller: _passwordController,
                           label: 'Password',
-                          hint: 'Create a strong password',
+                          hint: 'Enter your password',
                           icon: Icons.lock_outline,
                           isPassword: true,
                           obscureText: _obscurePassword,
@@ -316,85 +291,13 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                             });
                           },
                         ),
-                        const SizedBox(height: 16),
-                        _buildInputField(
-                          controller: _confirmPasswordController,
-                          label: 'Confirm Password',
-                          hint: 'Confirm your password',
-                          icon: Icons.lock_outline,
-                          isPassword: true,
-                          obscureText: _obscureConfirmPassword,
-                          onToggleObscure: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
-                            });
-                          },
-                        ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 40),
 
-                  // Checkbox
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _agreedToTerms = !_agreedToTerms;
-                            });
-                          },
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            margin: const EdgeInsets.only(top: 2, right: 12),
-                            decoration: BoxDecoration(
-                              color: _agreedToTerms ? AppColors.goldPrimary : Colors.transparent,
-                              border: Border.all(
-                                color: AppColors.goldPrimary,
-                                width: 1.5,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: _agreedToTerms
-                                ? const Icon(Icons.check, size: 16, color: Colors.black)
-                                : null,
-                          ),
-                        ),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppColors.textMuted,
-                                height: 1.5,
-                              ),
-                              children: const [
-                                TextSpan(text: 'I agree to the '),
-                                TextSpan(
-                                  text: 'Terms of Service',
-                                  style: TextStyle(color: AppColors.goldPrimary, fontWeight: FontWeight.w600),
-                                ),
-                                TextSpan(text: ' and '),
-                                TextSpan(
-                                  text: 'Privacy Policy',
-                                  style: TextStyle(color: AppColors.goldPrimary, fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Continue Button
+                  // Login Button
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Container(
@@ -405,7 +308,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _signUp,
+                        onPressed: _isLoading ? null : _login,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
@@ -427,7 +330,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                                 children: [
                                   const Spacer(),
                                   Text(
-                                    'Continue',
+                                    'Login',
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
@@ -458,7 +361,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            'or continue with',
+                            'or login with',
                             style: GoogleFonts.inter(
                               fontSize: 13,
                               color: AppColors.textMuted,
@@ -480,27 +383,24 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                   // Social Buttons
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildSocialButton(
-                            'Google',
-                            'assets/images/google_logo.png',
-                            onTap: _handleGoogleSignIn,
-                          ),
-                        ),
-                      ],
+                    child: _buildSocialButton(
+                      'Continue with Google',
+                      'assets/images/google_logo.png',
+                      onTap: _handleGoogleSignIn,
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 40),
 
-                  // Login Text
+                  // Sign Up Text
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Login coming soon.')),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const CreateAccountScreen(),
+                          ),
                         );
                       },
                       child: RichText(
@@ -510,9 +410,9 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                             color: AppColors.textMuted,
                           ),
                           children: const [
-                            TextSpan(text: 'Already have an account? '),
+                            TextSpan(text: "Don't have an account? "),
                             TextSpan(
-                              text: 'Login',
+                              text: 'Sign up',
                               style: TextStyle(
                                 color: AppColors.goldPrimary,
                                 fontWeight: FontWeight.w700,
@@ -529,65 +429,6 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildProgressIndicator() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildStep(1, 'Account Info', true),
-        Container(
-          width: 30,
-          height: 1,
-          color: AppColors.goldPrimary,
-        ),
-        _buildStep(2, 'Verify', false),
-        Container(
-          width: 30,
-          height: 1,
-          color: Colors.white.withValues(alpha: 0.2),
-        ),
-        _buildStep(3, 'Complete', false),
-      ],
-    );
-  }
-
-  Widget _buildStep(int step, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isActive ? AppColors.goldPrimary : Colors.transparent,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isActive ? AppColors.goldPrimary : Colors.white.withValues(alpha: 0.5),
-              width: 1,
-            ),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            step.toString(),
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isActive ? Colors.black : Colors.white.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-            color: isActive ? AppColors.goldPrimary : Colors.white.withValues(alpha: 0.5),
-          ),
-        ),
-      ],
     );
   }
 

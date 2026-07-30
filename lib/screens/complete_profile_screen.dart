@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
@@ -50,30 +51,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // Step 1: Link email/password if user arrived via phone OTP flow
-      if (!widget.isGoogleSignIn && widget.password.isNotEmpty) {
-        try {
-          await AuthService.linkEmailPassword(
-            email: widget.email,
-            password: widget.password,
-          );
-        } on FirebaseAuthException catch (e) {
-          // If email-already-in-use, inform user but still allow profile save
-          if (e.code == 'email-already-in-use') {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
-              );
-            }
-            // Don't block registration — the phone auth still works
-          } else if (e.code == 'provider-already-linked') {
-            // Already linked, continue silently
-          } else {
-            rethrow;
-          }
-        }
-      }
-
       // Step 2: Determine howDidYouHear value
       String howDidYouHear = _selectedSource ?? '';
       if (_selectedSource == 'Other') {
@@ -106,6 +83,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
+      debugPrint('DEBUG COMPLETE PROFILE: FirebaseAuthException CODE: ${e.code}, MESSAGE: ${e.message}');
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -113,6 +91,11 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         );
       }
     } catch (e) {
+      debugPrint('DEBUG COMPLETE PROFILE: Unexpected error: $e');
+      debugPrint('DEBUG COMPLETE PROFILE: runtimeType=${e.runtimeType}');
+      if (e is PlatformException) {
+        debugPrint('DEBUG PLATFORM CODE: ${e.code}, DETAILS: ${e.details}, MESSAGE: ${e.message}');
+      }
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -250,12 +233,6 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                           label: 'Email Address',
                           value: widget.email,
                           icon: Icons.mail_outline,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildSummaryCard(
-                          label: 'Phone Number',
-                          value: widget.phoneNumber.isNotEmpty ? widget.phoneNumber : 'Not provided',
-                          icon: Icons.phone_outlined,
                         ),
                       ],
                     ),
