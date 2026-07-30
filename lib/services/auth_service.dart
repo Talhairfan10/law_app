@@ -93,12 +93,20 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No signed-in user found. Please sign in again.',
+      );
+    }
+
     final credential = EmailAuthProvider.credential(
       email: email,
       password: password,
     );
 
-    await _auth.currentUser!.linkWithCredential(credential);
+    await user.linkWithCredential(credential);
   }
 
   // ── Save User Profile to Firestore ──
@@ -112,7 +120,14 @@ class AuthService {
     required String preferredLanguage,
     String? howDidYouHear,
   }) async {
-    final uid = _auth.currentUser!.uid;
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw FirebaseAuthException(
+        code: 'no-current-user',
+        message: 'No signed-in user found. Please sign in again.',
+      );
+    }
+    final uid = user.uid;
 
     await _firestore.collection('users').doc(uid).set({
       'fullName': fullName,
@@ -152,6 +167,8 @@ class AuthService {
         return 'Network error. Please check your connection and try again.';
       case 'user-disabled':
         return 'This account has been disabled. Please contact support.';
+      case 'no-current-user':
+        return 'No signed-in user found. Please sign in again.';
       case 'operation-not-allowed':
         return 'This sign-in method is not enabled. Please contact support.';
       default:

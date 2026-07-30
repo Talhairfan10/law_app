@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'create_account_screen.dart';
 
 class OnboardingPage3 extends StatelessWidget {
   final ValueNotifier<int> currentPageNotifier;
@@ -128,18 +129,18 @@ class OnboardingPage3 extends StatelessWidget {
                     ),
                   ),
 
-                  Spacer(flex: 2),
+                  const Spacer(flex: 2),
 
                   // ── Why Choose Banner ──
                   _buildWhyChooseBanner(),
 
-                  Spacer(flex: 2),
+                  const Spacer(flex: 2),
                 ],
               ),
             ),
 
             // ── Bottom Section ──
-            _buildBottomSection(),
+            _buildBottomSection(context),
           ],
         ),
       ),
@@ -265,7 +266,7 @@ class OnboardingPage3 extends StatelessWidget {
   }
 
   // ── Bottom Section (Buttons + Dots + Footer) ──
-  Widget _buildBottomSection() {
+  Widget _buildBottomSection(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -283,7 +284,14 @@ class OnboardingPage3 extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const CreateAccountScreen(),
+                    ),
+                  );
+                },
                 child: Row(
                   children: [
                     const SizedBox(width: 56), // balance
@@ -334,7 +342,11 @@ class OnboardingPage3 extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 borderRadius: BorderRadius.circular(12),
-                onTap: () {},
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Login coming soon.')),
+                  );
+                },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

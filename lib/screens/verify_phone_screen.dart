@@ -621,7 +621,7 @@ class _VerifyPhoneScreenState extends State<VerifyPhoneScreen> {
                         // Watermark mock
                         Opacity(
                           opacity: 0.2,
-                          child: Icon(Icons.account_balance, color: Colors.white, size: 40),
+                          child: const Icon(Icons.account_balance, color: Colors.white, size: 40),
                         ),
                       ],
                     ),

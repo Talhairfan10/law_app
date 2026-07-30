@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../services/auth_service.dart';
-import 'welcome_screen.dart';
+import 'home_dashboard_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   final String fullName;
@@ -97,7 +97,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(
-            builder: (context) => WelcomeScreen(fullName: widget.fullName),
+            builder: (context) => const HomeDashboardScreen(),
           ),
           (route) => false,
         );

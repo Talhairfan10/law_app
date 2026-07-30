@@ -315,7 +315,11 @@ class _LandingScreenState extends State<LandingScreen>
             GoldOutlineButton(
               label: 'Login',
               leadingIcon: Icons.person_outline_rounded,
-              onPressed: () {},
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Login coming soon.')),
+                );
+              },
             ),
           ],
         ),
@@ -358,25 +362,42 @@ class _LandingScreenState extends State<LandingScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Google
                 SocialButton(
                   icon: Icons.g_mobiledata_rounded,
                   iconColor: const Color(0xFFEA4335),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateAccountScreen(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(width: 16),
                 // Apple
                 SocialButton(
                   icon: Icons.apple_rounded,
                   iconColor: Colors.black,
-                  onPressed: () {},
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Apple Sign-In coming soon.')),
+                    );
+                  },
                 ),
                 const SizedBox(width: 16),
                 // Phone
                 SocialButton(
                   icon: Icons.phone_rounded,
                   iconColor: const Color(0xFF6B4FA0),
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CreateAccountScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

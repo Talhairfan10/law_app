@@ -544,7 +544,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
           label: 'Continue with Apple',
           iconSize: 26,
           onPressed: () {
-            // TODO: Apple sign-in
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Apple Sign-In coming soon.')),
+            );
           },
         ),
         SizedBox(height: screenHeight * 0.01),
@@ -622,7 +624,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
         ),
         GestureDetector(
           onTap: () {
-            // TODO: Navigate to login
+            Navigator.of(context).pop();
           },
           child: Row(
             mainAxisSize: MainAxisSize.min,

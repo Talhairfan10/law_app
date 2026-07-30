@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
 import '../services/auth_service.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 import 'verify_phone_screen.dart';
 import 'complete_profile_screen.dart';
 
@@ -22,10 +23,9 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
   final TextEditingController _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _agreedToTerms = true;
+  bool _agreedToTerms = false;
   bool _isLoading = false;
-
-  final String _selectedCountryCode = '+92';
+  String _fullPhoneNumber = '';
 
   @override
   void dispose() {
@@ -69,8 +69,12 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
       return;
     }
 
-    final phone = _phoneController.text.trim();
-    final fullPhoneNumber = '$_selectedCountryCode$phone';
+    final phoneText = _phoneController.text.trim();
+    if (phoneText.isEmpty) {
+       // _fullPhoneNumber stays as whatever onChanged set it to.
+       // Validation above already catches empty phone.
+    }
+    
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -79,7 +83,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
 
     try {
       await AuthService.verifyPhoneNumber(
-        phoneNumber: fullPhoneNumber,
+        phoneNumber: _fullPhoneNumber,
         onVerificationCompleted: (PhoneAuthCredential credential) async {
           // Auto-verification on Android — sign in automatically
           try {
@@ -91,7 +95,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                   builder: (context) => CompleteProfileScreen(
                     fullName: name,
                     email: email,
-                    phoneNumber: fullPhoneNumber,
+                    phoneNumber: _fullPhoneNumber,
                     password: password,
                   ),
                 ),
@@ -120,7 +124,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => VerifyPhoneScreen(
-                  phoneNumber: fullPhoneNumber,
+                  phoneNumber: _fullPhoneNumber,
                   fullName: name,
                   email: email,
                   password: password,
@@ -524,9 +528,17 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildSocialButton('Apple', Icons.apple)),
+                        Expanded(child: _buildSocialButton('Apple', Icons.apple, onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Apple Sign-In coming soon.')),
+                          );
+                        })),
                         const SizedBox(width: 12),
-                        Expanded(child: _buildSocialButton('Phone', Icons.phone, iconColor: AppColors.purpleLight)),
+                        Expanded(child: _buildSocialButton('Phone', Icons.phone, iconColor: AppColors.purpleLight, onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('You are already on the phone sign-up screen.')),
+                          );
+                        })),
                       ],
                     ),
                   ),
@@ -535,22 +547,29 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
 
                   // Login Text
                   Center(
-                    child: RichText(
-                      text: TextSpan(
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppColors.textMuted,
-                        ),
-                        children: const [
-                          TextSpan(text: 'Already have an account? '),
-                          TextSpan(
-                            text: 'Login',
-                            style: TextStyle(
-                              color: AppColors.goldPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
+                    child: GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Login coming soon.')),
+                        );
+                      },
+                      child: RichText(
+                        text: TextSpan(
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: AppColors.textMuted,
                           ),
-                        ],
+                          children: const [
+                            TextSpan(text: 'Already have an account? '),
+                            TextSpan(
+                              text: 'Login',
+                              style: TextStyle(
+                                color: AppColors.goldPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -722,67 +741,46 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    // Fake Country Picker
-                    Container(
-                      padding: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          right: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 14,
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.star, color: Colors.white, size: 8),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _selectedCountryCode,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted, size: 16),
-                        ],
+                const SizedBox(height: 8),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    textTheme: TextTheme(
+                      titleMedium: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.white,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Enter your phone number',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: AppColors.textMuted.withValues(alpha: 0.6),
-                          ),
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                        ),
-                      ),
+                  ),
+                  child: IntlPhoneField(
+                    controller: _phoneController,
+                    dropdownTextStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.white,
                     ),
-                  ],
+                    dropdownIcon: Icon(Icons.keyboard_arrow_down, color: AppColors.textMuted, size: 16),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your phone number',
+                      hintStyle: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: AppColors.textMuted.withValues(alpha: 0.6),
+                      ),
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      counterText: "",
+                    ),
+                    initialCountryCode: 'PK',
+                    onChanged: (phone) {
+                      _fullPhoneNumber = phone.completeNumber;
+                    },
+                  ),
                 ),
               ],
             ),
