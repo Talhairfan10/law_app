@@ -72,7 +72,7 @@ jobs:
         run: flutter test
 
       - name: Print debug keystore SHA fingerprints
-        run: cd android && ./gradlew signingReport
+        run: cd android && sh gradlew signingReport
 
       - name: Build Android APK
         run: flutter build apk --release
