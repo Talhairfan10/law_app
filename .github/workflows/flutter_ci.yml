@@ -38,10 +38,29 @@ jobs:
           ${{ secrets.FIREBASE_OPTIONS_DART }}
           EOF
 
+      - name: Validate secrets are not empty
+        run: |
+          echo "GOOGLE_SERVICES_JSON length: ${#GOOGLE_SERVICES_JSON}"
+          echo "FIREBASE_OPTIONS_DART length: ${#FIREBASE_OPTIONS_DART}"
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+          FIREBASE_OPTIONS_DART: ${{ secrets.FIREBASE_OPTIONS_DART }}
+
       - name: Debug config files
         run: |
           cat lib/firebase_options.dart
           wc -l lib/firebase_options.dart
+
+      - name: Verify Firebase config files are not empty
+        run: |
+          if [ ! -s lib/firebase_options.dart ]; then
+            echo "ERROR: lib/firebase_options.dart is empty! Check that the FIREBASE_OPTIONS_DART GitHub Secret is set correctly."
+            exit 1
+          fi
+          if [ ! -s android/app/google-services.json ]; then
+            echo "ERROR: android/app/google-services.json is empty! Check that the GOOGLE_SERVICES_JSON GitHub Secret is set correctly."
+            exit 1
+          fi
 
       - name: Install dependencies
         run: flutter pub get
