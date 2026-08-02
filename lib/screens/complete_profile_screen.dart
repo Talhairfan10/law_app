@@ -42,6 +42,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   /// Completes the registration: links email/password (if phone flow), saves profile to Firestore.
   Future<void> _completeRegistration() async {
     if (_selectedRole == null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select if you are a Client or a Lawyer')),
       );
@@ -471,9 +472,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       children: [
         _buildStep(1, 'Account Info', true, isCompleted: true),
         Container(width: 30, height: 1, color: AppColors.goldPrimary),
-        _buildStep(2, 'Verify', true, isCompleted: true),
-        Container(width: 30, height: 1, color: AppColors.goldPrimary),
-        _buildStep(3, 'Complete', true, isCompleted: false),
+        _buildStep(2, 'Complete', true, isCompleted: false),
       ],
     );
   }

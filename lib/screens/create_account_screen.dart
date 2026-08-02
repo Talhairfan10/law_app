@@ -8,6 +8,7 @@ import '../widgets/sign_up_option_button.dart';
 import '../services/auth_service.dart';
 import 'signup_form_screen.dart';
 import 'complete_profile_screen.dart';
+import 'login_screen.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -603,7 +604,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen>
         ),
         GestureDetector(
           onTap: () {
-            Navigator.of(context).pop();
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const LoginScreen(),
+              ),
+            );
           },
           child: Row(
             mainAxisSize: MainAxisSize.min,

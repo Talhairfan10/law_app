@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'placeholders.dart';
+import 'payments_screen.dart';
+import 'new_case/step1_category_screen.dart';
 import '../services/auth_service.dart';
 import 'landing_screen.dart';
 
@@ -27,16 +29,18 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       if (user.displayName != null && user.displayName!.isNotEmpty) {
-        setState(() {
-          _userName = user.displayName!;
-        });
+        if (mounted) {
+          setState(() {
+            _userName = user.displayName!;
+          });
+        }
       } else {
         try {
           final doc = await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .get();
-          if (doc.exists && doc.data()!.containsKey('fullName')) {
+          if (mounted && doc.exists && doc.data()!.containsKey('fullName')) {
             setState(() {
               _userName = doc.data()!['fullName'] ?? 'User';
             });
@@ -67,6 +71,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       _buildDashboardView(),
       const PlaceholderScreen(title: 'My Cases'),
       const PlaceholderScreen(title: 'AI Assistant'),
+      PaymentsScreen(onBack: () => setState(() => _currentIndex = 0)),
       const PlaceholderScreen(title: 'Notifications'),
       const PlaceholderScreen(title: 'Profile'),
     ];
@@ -130,192 +135,175 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
 
   Widget _buildDashboardView() {
     return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Builder(
-                  builder: (context) => IconButton(
-                    icon: const Icon(Icons.menu, color: Color(0xFF1A1A2E), size: 28),
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getGreeting(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: const Color(0xFF8E8E93),
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        Text(
-                          _userName,
-                          style: GoogleFonts.poppins(
-                            fontSize: 24,
-                            color: const Color(0xFF1A1A2E),
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const PlaceholderScreen(title: 'Notifications'),
-                      ),
-                    );
-                  },
-                  child: Stack(
-                    children: [
-                      const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Color(0xFF1A1A2E),
-                        size: 32,
-                      ),
-                      Positioned(
-                        right: 2,
-                        top: 2,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF6C5CE7), // Purple dot
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFFFAFAFA), width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // Subtitle
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Text(
-              'How can we help you today?',
-              style: GoogleFonts.poppins(
-                fontSize: 16,
-                color: const Color(0xFF8E8E93),
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Grid of Cards
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Column(
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header Row
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Builder(
+                    builder: (context) => IconButton(
+                      icon: const Icon(Icons.menu, color: Color(0xFF1A1A2E), size: 28),
+                      onPressed: () {
+                        Scaffold.of(context).openDrawer();
+                      },
+                    ),
+                  ),
                   Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionCard(
-                            title: 'New Case',
-                            subtitle: 'Create a new case',
-                            iconData: Icons.add,
-                            gradientColors: const [Color(0xFF6C5CE7), Color(0xFF4834D4)],
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const PlaceholderScreen(title: 'Create New Case'),
-                                ),
-                              );
-                            },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getGreeting(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: const Color(0xFF8E8E93),
+                              fontWeight: FontWeight.w400,
+                            ),
                           ),
+                          Text(
+                            _userName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 24,
+                              color: const Color(0xFF1A1A2E),
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlaceholderScreen(title: 'Notifications'),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildActionCard(
-                            title: 'My Cases',
-                            subtitle: 'View your all cases',
-                            iconData: Icons.snippet_folder_outlined,
-                            gradientColors: const [Color(0xFF5A72EA), Color(0xFF3B55D9)],
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const PlaceholderScreen(title: 'My Cases'),
-                                ),
-                              );
-                            },
+                      );
+                    },
+                    child: Stack(
+                      children: [
+                        const Icon(
+                          Icons.notifications_none_rounded,
+                          color: Color(0xFF1A1A2E),
+                          size: 32,
+                        ),
+                        Positioned(
+                          right: 2,
+                          top: 2,
+                          child: Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF6C5CE7), // Purple dot
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFFFAFAFA), width: 2),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionCard(
-                            title: 'AI Assistant',
-                            subtitle: 'Get legal guidance',
-                            iconData: Icons.chat_bubble_outline_rounded,
-                            gradientColors: const [Color(0xFFFDBA4D), Color(0xFFF39C12)],
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const PlaceholderScreen(title: 'AI Assistant Chat'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildActionCard(
-                            title: 'Contact Support',
-                            subtitle: 'Talk to our team',
-                            iconData: Icons.headset_mic_outlined,
-                            gradientColors: const [Color(0xFF5A72EA), Color(0xFF3B55D9)],
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const PlaceholderScreen(title: 'Contact Support'),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
-          ),
-        ],
+            
+            // Subtitle
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Text(
+                'How can we help you today?',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: const Color(0xFF8E8E93),
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Grid of Cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                childAspectRatio: 0.85,
+                children: [
+                  _buildActionCard(
+                    title: 'New Case',
+                    subtitle: 'Create a new case',
+                    iconData: Icons.add,
+                    gradientColors: const [Color(0xFF6C5CE7), Color(0xFF4834D4)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const Step1CategoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
+                    title: 'My Cases',
+                    subtitle: 'View your all cases',
+                    iconData: Icons.snippet_folder_outlined,
+                    gradientColors: const [Color(0xFF5A72EA), Color(0xFF3B55D9)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlaceholderScreen(title: 'My Cases'),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
+                    title: 'AI Assistant',
+                    subtitle: 'Get legal guidance',
+                    iconData: Icons.chat_bubble_outline_rounded,
+                    gradientColors: const [Color(0xFFFDBA4D), Color(0xFFF39C12)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlaceholderScreen(title: 'AI Assistant Chat'),
+                        ),
+                      );
+                    },
+                  ),
+                  _buildActionCard(
+                    title: 'Contact Support',
+                    subtitle: 'Talk to our team',
+                    iconData: Icons.headset_mic_outlined,
+                    gradientColors: const [Color(0xFF5A72EA), Color(0xFF3B55D9)],
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PlaceholderScreen(title: 'Contact Support'),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
@@ -432,9 +420,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             children: [
               _buildNavItem(icon: Icons.home_filled, label: 'Home', index: 0),
               _buildNavItem(icon: Icons.work_outline_rounded, label: 'Cases', index: 1),
-              _buildNavItem(icon: Icons.explore_outlined, label: 'AI Assistant', index: 2),
-              _buildNavItem(icon: Icons.notifications_none_rounded, label: 'Notifications', index: 3),
-              _buildNavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 4),
+              _buildNavItem(icon: Icons.explore_outlined, label: 'AI', index: 2),
+              _buildNavItem(icon: Icons.account_balance_wallet_outlined, label: 'Pay', index: 3),
+              _buildNavItem(icon: Icons.notifications_none_rounded, label: 'Alerts', index: 4),
+              _buildNavItem(icon: Icons.person_outline_rounded, label: 'Profile', index: 5),
             ],
           ),
         ),
@@ -456,12 +445,12 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: color, size: 24),
+          Icon(icon, color: color, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 10,
+              fontSize: 9,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               color: color,
             ),

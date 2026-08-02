@@ -40,6 +40,10 @@ dependencies:
   google_sign_in: any
   cloud_firestore: any
   intl_phone_field: ^3.2.0
+  firebase_storage: any
+  file_picker: ^8.1.2
+  flutter_plugin_android_lifecycle: 2.0.21
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

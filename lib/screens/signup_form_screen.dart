@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../widgets/mashvira_logo.dart';
 import '../services/auth_service.dart';
 import 'complete_profile_screen.dart';
+import 'login_screen.dart';
 
 class SignupFormScreen extends StatefulWidget {
   const SignupFormScreen({super.key});
@@ -57,6 +58,7 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
   Future<void> _signUp() async {
     final validationError = _validateFields();
     if (validationError != null) {
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(validationError)),
       );
@@ -499,8 +501,11 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
                   Center(
                     child: GestureDetector(
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Login coming soon.')),
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
                         );
                       },
                       child: RichText(
@@ -540,15 +545,9 @@ class _SignupFormScreenState extends State<SignupFormScreen> {
         Container(
           width: 30,
           height: 1,
-          color: AppColors.goldPrimary,
-        ),
-        _buildStep(2, 'Verify', false),
-        Container(
-          width: 30,
-          height: 1,
           color: Colors.white.withValues(alpha: 0.2),
         ),
-        _buildStep(3, 'Complete', false),
+        _buildStep(2, 'Complete', false),
       ],
     );
   }
