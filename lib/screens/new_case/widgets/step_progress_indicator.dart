@@ -23,81 +23,89 @@ class StepProgressIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8.0),
-      child: Column(
-        children: [
-          // Row of circles + lines
-          Row(
-            children: List.generate(5, (i) {
-              final step = i + 1;
-              final isCompleted = step < currentStep;
-              final isCurrent = step == currentStep;
-              final isLast = i == 4;
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Calculate sizes based on available width to prevent overflow.
+          // Total width is shared between 5 circles and 4 connecting lines.
+          final circleSize = (constraints.maxWidth * 0.085).clamp(24.0, 32.0);
+          final totalCircles = circleSize * 5;
+          final totalLineSpace = constraints.maxWidth - totalCircles;
+          final lineWidth = totalLineSpace / 4;
 
-              return Expanded(
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 0,
-                      child: _buildCircle(step, isCompleted, isCurrent),
-                    ),
-                    if (!isLast)
-                      Expanded(
-                        child: Container(
+          return Column(
+            children: [
+              // Row of circles + lines
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (i) {
+                  final step = i + 1;
+                  final isCompleted = step < currentStep;
+                  final isLast = i == 4;
+
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCircle(step, isCompleted, step == currentStep,
+                          circleSize),
+                      if (!isLast)
+                        Container(
+                          width: lineWidth,
                           height: 2,
-                          color: isCompleted ? _lineCompleted : _lineIncomplete,
+                          color:
+                              isCompleted ? _lineCompleted : _lineIncomplete,
                         ),
+                    ],
+                  );
+                }),
+              ),
+              const SizedBox(height: 8),
+              // Labels row — use Expanded so they flex to fit
+              Row(
+                children: List.generate(5, (i) {
+                  final step = i + 1;
+                  final isCurrent = step == currentStep;
+                  final isCompleted = step < currentStep;
+                  return Expanded(
+                    child: Text(
+                      _labels[i],
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        fontSize: 9.5,
+                        fontWeight: (isCurrent || isCompleted)
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                        color: (isCurrent || isCompleted)
+                            ? _primary
+                            : const Color(0xFFAAAAAA),
                       ),
-                  ],
-                ),
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          // Labels row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(5, (i) {
-              final step = i + 1;
-              final isCurrent = step == currentStep;
-              final isCompleted = step < currentStep;
-              return SizedBox(
-                width: 56,
-                child: Text(
-                  _labels[i],
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    fontWeight: (isCurrent || isCompleted)
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: (isCurrent || isCompleted)
-                        ? _primary
-                        : const Color(0xFFAAAAAA),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ],
+                    ),
+                  );
+                }),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildCircle(int step, bool isCompleted, bool isCurrent) {
+  Widget _buildCircle(
+      int step, bool isCompleted, bool isCurrent, double size) {
     if (isCompleted) {
       return Container(
-        width: 32,
-        height: 32,
+        width: size,
+        height: size,
         decoration: const BoxDecoration(
           color: _primary,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+        child: Icon(Icons.check_rounded,
+            color: Colors.white, size: size * 0.56),
       );
     } else if (isCurrent) {
       return Container(
-        width: 32,
-        height: 32,
+        width: size,
+        height: size,
         decoration: const BoxDecoration(
           color: _primary,
           shape: BoxShape.circle,
@@ -108,15 +116,15 @@ class StepProgressIndicator extends StatelessWidget {
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontSize: size * 0.44,
             ),
           ),
         ),
       );
     } else {
       return Container(
-        width: 32,
-        height: 32,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -128,7 +136,7 @@ class StepProgressIndicator extends StatelessWidget {
             style: GoogleFonts.poppins(
               color: const Color(0xFFAAAAAA),
               fontWeight: FontWeight.w500,
-              fontSize: 13,
+              fontSize: size * 0.41,
             ),
           ),
         ),

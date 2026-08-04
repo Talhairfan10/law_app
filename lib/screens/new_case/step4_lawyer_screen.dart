@@ -4,6 +4,7 @@ import '../../models/new_case_data.dart';
 import 'widgets/step_progress_indicator.dart';
 import 'widgets/nav_buttons.dart';
 import 'step5_review_screen.dart';
+import '../../widgets/app_dropdown.dart';
 
 class Step4LawyerScreen extends StatefulWidget {
   final NewCaseData caseData;
@@ -279,27 +280,11 @@ class _Step4LawyerScreenState extends State<Step4LawyerScreen> {
               color: const Color(0xFF8E8E93),
             ),
           ),
-          DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: Color(0xFFAAAAAA), size: 18),
-              items: _budgetOptions.map((opt) {
-                return DropdownMenuItem<String>(
-                  value: opt,
-                  child: Text(
-                    opt,
-                    style: GoogleFonts.poppins(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                );
-              }).toList(),
-              onChanged: onChanged,
-            ),
+          AppDropdown(
+            value: value,
+            hint: 'Select',
+            items: _budgetOptions,
+            onChanged: onChanged,
           ),
         ],
       ),

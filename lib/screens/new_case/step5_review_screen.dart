@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../models/new_case_data.dart';
+import '../../services/case_service.dart';
 import 'widgets/step_progress_indicator.dart';
 import 'widgets/nav_buttons.dart';
 import '../home_dashboard_screen.dart';
@@ -58,29 +58,10 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) throw Exception('Not authenticated');
 
-      final data = widget.caseData;
-
-      await FirebaseFirestore.instance.collection('cases').add({
-        'userId': uid,
-        'category': data.category,
-        'subCategory': data.subCategory,
-        'shortDescription': data.shortDescription,
-        'issueDate': data.issueDate?.toIso8601String(),
-        'location': data.location,
-        'additionalInfo': data.additionalInfo,
-        'documentUrls': data.uploadedFiles
-            .map((f) => {
-                  'name': f.name,
-                  'url': f.downloadUrl,
-                  'size': f.sizeLabel,
-                })
-            .toList(),
-        'budgetMin': data.budgetMin,
-        'budgetMax': data.budgetMax,
-        'lawyerLevel': data.lawyerLevel,
-        'status': 'pending_assignment',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+      await CaseService.submitCase(
+        data: widget.caseData,
+        userId: uid,
+      );
 
       if (mounted) {
         setState(() => _isSubmitting = false);

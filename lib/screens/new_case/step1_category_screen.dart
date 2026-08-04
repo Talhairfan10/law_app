@@ -126,7 +126,7 @@ class Step1CategoryScreen extends StatelessWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 14,
                     mainAxisSpacing: 14,
-                    childAspectRatio: 1.35,
+                    childAspectRatio: 1.10,
                   ),
                   itemCount: _categories.length,
                   itemBuilder: (context, index) {

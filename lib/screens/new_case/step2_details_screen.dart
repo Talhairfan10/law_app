@@ -5,6 +5,7 @@ import '../../models/new_case_data.dart';
 import 'widgets/step_progress_indicator.dart';
 import 'widgets/nav_buttons.dart';
 import 'step3_documents_screen.dart';
+import '../../widgets/app_dropdown.dart';
 
 class Step2DetailsScreen extends StatefulWidget {
   final NewCaseData caseData;
@@ -224,33 +225,11 @@ class _Step2DetailsScreenState extends State<Step2DetailsScreen> {
     return _buildFieldCard(
       label: 'Sub Category',
       isRequired: true,
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedSubCategory,
-          hint: Text(
-            'Select Sub Category',
-            style: GoogleFonts.poppins(
-              color: const Color(0xFFAAAAAA),
-              fontSize: 14,
-            ),
-          ),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded,
-              color: Color(0xFFAAAAAA)),
-          isExpanded: true,
-          items: _subCategories.map((sub) {
-            return DropdownMenuItem<String>(
-              value: sub,
-              child: Text(
-                sub,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: const Color(0xFF1A1A2E),
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: (val) => setState(() => _selectedSubCategory = val),
-        ),
+      child: AppDropdown(
+        value: _selectedSubCategory,
+        hint: 'Select Sub Category',
+        items: _subCategories,
+        onChanged: (val) => setState(() => _selectedSubCategory = val),
       ),
     );
   }

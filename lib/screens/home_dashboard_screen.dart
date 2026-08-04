@@ -7,6 +7,7 @@ import 'payments_screen.dart';
 import 'new_case/step1_category_screen.dart';
 import '../services/auth_service.dart';
 import 'landing_screen.dart';
+import 'my_cases_screen.dart';
 
 class HomeDashboardScreen extends StatefulWidget {
   const HomeDashboardScreen({super.key});
@@ -69,7 +70,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     // Index 0 is the Dashboard view.
     final List<Widget> pages = [
       _buildDashboardView(),
-      const PlaceholderScreen(title: 'My Cases'),
+      const MyCasesScreen(),
       const PlaceholderScreen(title: 'AI Assistant'),
       PaymentsScreen(onBack: () => setState(() => _currentIndex = 0)),
       const PlaceholderScreen(title: 'Notifications'),
@@ -240,7 +241,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 mainAxisSpacing: 16,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                childAspectRatio: 0.85,
+                childAspectRatio: 0.72,
                 children: [
                   _buildActionCard(
                     title: 'New Case',
@@ -265,7 +266,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const PlaceholderScreen(title: 'My Cases'),
+                          builder: (_) => const MyCasesScreen(),
                         ),
                       );
                     },
