@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../services/auth_service.dart';
 import 'home_dashboard_screen.dart';
+import 'lawyer/lawyer_dashboard_screen.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
   final String fullName;
@@ -72,13 +73,23 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
 
       // Step 4: Navigate to home and clear the auth navigation stack
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const HomeDashboardScreen(),
-          ),
-          (route) => false,
-        );
+        if (_selectedRole == 'lawyer') {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LawyerDashboardScreen(),
+            ),
+            (route) => false,
+          );
+        } else {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const HomeDashboardScreen(),
+            ),
+            (route) => false,
+          );
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Registration complete! Welcome to Mashvira Law House.')),
         );

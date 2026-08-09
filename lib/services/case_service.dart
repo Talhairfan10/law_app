@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
+import 'cloudinary_service.dart';
 import '../models/case_model.dart';
 import '../models/new_case_data.dart';
 
@@ -49,23 +53,6 @@ class CaseService {
       if (!doc.exists) return null;
       return CaseModel.fromFirestore(doc);
     });
-  }
-
-  // ─────────────────────────────────────────────────
-  //  Notification Count (read side only)
-  // ─────────────────────────────────────────────────
-
-  /// Returns a real-time stream of the count of unread notifications
-  /// for the given user. Reads from `users/{userId}/notifications`
-  /// where `read == false`.
-  static Stream<int> getUnreadNotificationCount(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('notifications')
-        .where('read', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
   }
 
   // ─────────────────────────────────────────────────
@@ -230,5 +217,199 @@ class CaseService {
     final hour = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     return '${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Lawyer-Specific Read Operations
+  // ─────────────────────────────────────────────────
+
+  /// Returns a real-time stream of all cases assigned to [lawyerId],
+  /// ordered by creation date (newest first) via client-side sort.
+  static Stream<List<CaseModel>> getLawyerCases(String lawyerId) {
+    return _casesRef
+        .where('lawyerId', isEqualTo: lawyerId)
+        .snapshots()
+        .map((snapshot) {
+      final cases =
+          snapshot.docs.map((doc) => CaseModel.fromFirestore(doc)).toList();
+      cases.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return cases;
+    });
+  }
+
+  /// Stream of total case count for a lawyer.
+  static Stream<int> getLawyerCaseCount(String lawyerId) {
+    return _casesRef
+        .where('lawyerId', isEqualTo: lawyerId)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Stream of case count filtered by status for a lawyer.
+  static Stream<int> getLawyerCaseCountByStatus(
+      String lawyerId, List<String> statuses) {
+    return _casesRef
+        .where('lawyerId', isEqualTo: lawyerId)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status'] as String? ?? '';
+        return statuses.contains(status);
+      }).length;
+    });
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Lawyer-Specific Write Operations
+  // ─────────────────────────────────────────────────
+
+  /// Updates the lawyer's simplified 3-stage progress for a case.
+  static Future<void> updateCaseStage(
+    String caseDocId, {
+    required int currentStage,
+    required int totalStages,
+    String? stageNote,
+  }) async {
+    await _casesRef.doc(caseDocId).update({
+      'stages': {
+        'current': currentStage,
+        'total': totalStages,
+        'note': stageNote ?? '',
+        'updatedAt': DateTime.now().toIso8601String(),
+      },
+    });
+  }
+
+  /// Updates the case notes field (editable by lawyer).
+  static Future<void> updateCaseNotes(
+      String caseDocId, String notes) async {
+    await _casesRef.doc(caseDocId).update({
+      'lawyerNotes': notes,
+    });
+  }
+
+  /// Appends a new entry to the case's activityLog array.
+  static Future<void> addActivityLogEntry(
+    String caseDocId, {
+    required String type,
+    required String title,
+    required String description,
+    required String actor,
+  }) async {
+    await _casesRef.doc(caseDocId).update({
+      'activityLog': FieldValue.arrayUnion([
+        {
+          'type': type,
+          'title': title,
+          'description': description,
+          'actor': actor,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      ]),
+    });
+  }
+
+  /// Updates the top-level case status and appends to statusHistory.
+  static Future<void> updateCaseStatus(
+    String caseDocId, {
+    required String newStatus,
+    required String message,
+  }) async {
+    await _casesRef.doc(caseDocId).update({
+      'status': newStatus,
+      'statusHistory': FieldValue.arrayUnion([
+        {
+          'status': newStatus,
+          'message': message,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      ]),
+    });
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Document Management (Lawyer)
+  // ─────────────────────────────────────────────────
+
+  // static final FirebaseStorage _storage = FirebaseStorage.instance;
+
+  /// Uploads a file to Firebase Storage and appends metadata to the
+  /// case's `documentUrls` array. Also creates an activity log entry.
+  ///
+  /// Returns the download URL on success, or null on failure.
+  static Future<String?> uploadCaseDocument(
+    String caseDocId, {
+    required File file,
+    required String fileName,
+    required String fileExtension,
+    required String fileSize,
+    required String uploadedBy,
+    String documentType = 'General',
+    String description = '',
+  }) async {
+    try {
+      /* --- FIREBASE STORAGE UPLOAD (Commented out due to Spark plan limits) ---
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final ref = _storage
+          .ref('case_documents/$caseDocId/${ts}_$fileName');
+      await ref.putFile(file);
+      final downloadUrl = await ref.getDownloadURL();
+      */
+
+      // --- CLOUDINARY UPLOAD ---
+      final response = await CloudinaryService.uploadFile(
+        file,
+        folder: 'case_documents/$caseDocId',
+      );
+
+      if (response == null || !response.containsKey('secure_url')) {
+        debugPrint('CaseService: Cloudinary upload returned null or missing secure_url');
+        return null;
+      }
+
+      final downloadUrl = response['secure_url'] as String;
+
+      // Append to documentUrls array
+      await _casesRef.doc(caseDocId).update({
+        'documentUrls': FieldValue.arrayUnion([
+          {
+            'name': fileName,
+            'url': downloadUrl,
+            'extension': fileExtension,
+            'sizeLabel': fileSize,
+            'documentType': documentType,
+            'description': description,
+            'uploadedBy': uploadedBy,
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        ]),
+      });
+
+      // Add activity log entry
+      await addActivityLogEntry(
+        caseDocId,
+        type: 'document_uploaded',
+        title: 'Document Uploaded',
+        description: 'Uploaded "$fileName" ($documentType)',
+        actor: uploadedBy,
+      );
+
+      return downloadUrl;
+    } catch (e, stackTrace) {
+      debugPrint('DEBUG UPLOAD ERROR (Lawyer side): $e');
+      debugPrint('StackTrace: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Removes a document entry from the case's `documentUrls` array.
+  static Future<void> deleteCaseDocument(
+    String caseDocId,
+    Map<String, dynamic> documentEntry,
+  ) async {
+    await _casesRef.doc(caseDocId).update({
+      'documentUrls': FieldValue.arrayRemove([documentEntry]),
+    });
   }
 }

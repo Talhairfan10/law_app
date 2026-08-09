@@ -1,0 +1,15 @@
+feat: finalize lawyer dashboard, routing, and cloud storage
+
+- **Auth/Routing Fixes**: Fixed role-based routing bug to accurately route users to 'Client Dashboard' or 'Lawyer Dashboard' based on Firestore `userType`. Added fallback routing to Client Dashboard.
+- **Storage Migration**: Replaced Firebase Storage with `CloudinaryService` for all document uploads (Client and Lawyer sides) to bypass Firebase Blaze plan constraints.
+- **Hearings Management**:
+  - Implemented `HearingService` to interface with `cases/{caseId}/hearings`.
+  - Built `LawyerHearingScheduleScreen` utilizing `table_calendar` for daily scheduling and hearing visualization.
+- **Visual Polish & Bug Fixes (Lawyer Side)**:
+  - Fixed dark-theme readability bugs.
+  - Applied `AppDropdown` to the Lawyer Upload Documents screen.
+  - Forced light-themed `ThemeData` over native pickers, calendar (`table_calendar`), and Dialog forms for crystal clear readability.
+- **Profile, Settings, & Notifications (Phase 4)**:
+  - Added `fl_chart` to `LawyerProfileScreen` to visualize Active, Completed, and Pending cases.
+  - Built `LawyerSettingsScreen` with placeholders for 2FA, Dark Mode, etc., and integrated it into the Lawyer Dashboard Drawer.
+  - Restructured `LawyerNotificationsScreen` as a StatefulWidget to support "All" and "Unread" tab filtering using `NotificationService`.

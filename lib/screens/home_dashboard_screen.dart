@@ -4,8 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'placeholders.dart';
 import 'payments_screen.dart';
+import 'alerts_screen.dart';
+import 'profile/profile_screen.dart';
 import 'new_case/step1_category_screen.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import 'landing_screen.dart';
 import 'my_cases_screen.dart';
 
@@ -73,8 +76,8 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       const MyCasesScreen(),
       const PlaceholderScreen(title: 'AI Assistant'),
       PaymentsScreen(onBack: () => setState(() => _currentIndex = 0)),
-      const PlaceholderScreen(title: 'Notifications'),
-      const PlaceholderScreen(title: 'Profile'),
+      const AlertsScreen(),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -184,34 +187,41 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                   ),
                   GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const PlaceholderScreen(title: 'Notifications'),
-                        ),
-                      );
+                      setState(() => _currentIndex = 4);
                     },
-                    child: Stack(
-                      children: [
-                        const Icon(
-                          Icons.notifications_none_rounded,
-                          color: Color(0xFF1A1A2E),
-                          size: 32,
-                        ),
-                        Positioned(
-                          right: 2,
-                          top: 2,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6C5CE7), // Purple dot
-                              shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFFAFAFA), width: 2),
+                    child: StreamBuilder<int>(
+                      stream: FirebaseAuth.instance.currentUser != null
+                          ? NotificationService.getUnreadCount(
+                              FirebaseAuth.instance.currentUser!.uid)
+                          : const Stream<int>.empty(),
+                      builder: (context, snapshot) {
+                        final unreadCount = snapshot.data ?? 0;
+                        return Stack(
+                          children: [
+                            const Icon(
+                              Icons.notifications_none_rounded,
+                              color: Color(0xFF1A1A2E),
+                              size: 32,
                             ),
-                          ),
-                        ),
-                      ],
+                            if (unreadCount > 0)
+                              Positioned(
+                                right: 2,
+                                top: 2,
+                                child: Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6C5CE7),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: const Color(0xFFFAFAFA),
+                                        width: 2),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],

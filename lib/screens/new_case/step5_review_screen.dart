@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../models/new_case_data.dart';
 import '../../services/case_service.dart';
+import '../../services/notification_service.dart';
 import 'widgets/step_progress_indicator.dart';
 import 'widgets/nav_buttons.dart';
 import '../home_dashboard_screen.dart';
@@ -61,7 +62,20 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
       await CaseService.submitCase(
         data: widget.caseData,
         userId: uid,
-      );
+      ).then((docId) async {
+        // Fetch the generated human-readable caseId from the document
+        final caseDoc = await CaseService.getCaseById(docId);
+        final humanCaseId = caseDoc?.caseId;
+
+        await NotificationService.createNotification(
+          userId: uid,
+          type: 'system',
+          title: 'Case Submitted',
+          description:
+              'Your case has been submitted and is pending lawyer assignment.',
+          caseId: humanCaseId,
+        );
+      });
 
       if (mounted) {
         setState(() => _isSubmitting = false);

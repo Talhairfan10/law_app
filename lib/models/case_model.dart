@@ -290,11 +290,17 @@ class CaseModel {
   final String status; // raw status string from Firestore
   final DateTime createdAt;
 
-  // New fields
+  // Client-side progress fields
   final Map<CaseStep, StepProgressData> caseProgress;
   final AssignedLawyer assignedLawyer;
   final List<StatusHistoryEntry> statusHistory;
   final String estimatedAssignment;
+
+  // Lawyer-specific fields
+  final String? lawyerId;
+  final Map<String, dynamic> stages; // { current: int, total: int, note: String }
+  final List<Map<String, dynamic>> activityLog;
+  final String lawyerNotes;
 
   const CaseModel({
     required this.docId,
@@ -316,6 +322,10 @@ class CaseModel {
     required this.assignedLawyer,
     required this.statusHistory,
     this.estimatedAssignment = 'Within 24 Hours',
+    this.lawyerId,
+    this.stages = const {'current': 1, 'total': 3, 'note': ''},
+    this.activityLog = const [],
+    this.lawyerNotes = '',
   });
 
   // ── Factory from Firestore ──
@@ -364,6 +374,18 @@ class CaseModel {
     final docsRaw = data['documentUrls'] as List<dynamic>? ?? [];
     final docs = docsRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
+    // Parse stages
+    final stagesRaw = data['stages'] as Map<String, dynamic>? ?? {'current': 1, 'total': 3, 'note': ''};
+
+    // Parse activityLog
+    final activityRaw = data['activityLog'] as List<dynamic>? ?? [];
+    final activityLog = activityRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    activityLog.sort((a, b) {
+      final aTs = DateTime.tryParse((a['timestamp'] as String?) ?? '') ?? DateTime(2000);
+      final bTs = DateTime.tryParse((b['timestamp'] as String?) ?? '') ?? DateTime(2000);
+      return bTs.compareTo(aTs); // newest first
+    });
+
     return CaseModel(
       docId: doc.id,
       userId: (data['userId'] as String?) ?? '',
@@ -386,6 +408,10 @@ class CaseModel {
       statusHistory: history,
       estimatedAssignment:
           (data['estimatedAssignment'] as String?) ?? 'Within 24 Hours',
+      lawyerId: data['lawyerId'] as String?,
+      stages: stagesRaw,
+      activityLog: activityLog,
+      lawyerNotes: (data['lawyerNotes'] as String?) ?? '',
     );
   }
 
@@ -489,4 +515,15 @@ class CaseModel {
 
   /// Number of uploaded documents.
   int get documentCount => documentUrls.length;
+
+  // ── Lawyer-specific getters ──
+
+  /// Current stage number (lawyer's 3-stage tracker).
+  int get currentStage => (stages['current'] as int?) ?? 1;
+
+  /// Total stages (lawyer's 3-stage tracker).
+  int get totalStages => (stages['total'] as int?) ?? 3;
+
+  /// Stage display string, e.g. "Stage 2 of 3".
+  String get stageLabel => 'Stage $currentStage of $totalStages';
 }

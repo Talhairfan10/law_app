@@ -2,8 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_storage/firebase_storage.dart';
+import '../../services/cloudinary_service.dart';
 import '../../models/new_case_data.dart';
 import 'widgets/step_progress_indicator.dart';
 import 'widgets/nav_buttons.dart';
@@ -68,13 +69,30 @@ class _Step3DocumentsScreenState extends State<Step3DocumentsScreen> {
       bool success = false;
       try {
         final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+        
+        /* --- FIREBASE STORAGE UPLOAD (Commented out due to Spark plan limits) ---
         final ts = DateTime.now().millisecondsSinceEpoch;
         final ref = FirebaseStorage.instance
             .ref('case_documents/$uid/${ts}_${file.name}');
         await ref.putFile(File(file.path!));
         downloadUrl = await ref.getDownloadURL();
-        success = true;
-      } catch (_) {
+        */
+
+        // --- CLOUDINARY UPLOAD ---
+        final response = await CloudinaryService.uploadFile(
+          File(file.path!),
+          folder: 'case_documents/$uid',
+        );
+
+        if (response != null && response.containsKey('secure_url')) {
+          downloadUrl = response['secure_url'] as String;
+          success = true;
+        } else {
+          success = false;
+        }
+      } catch (e, stackTrace) {
+        debugPrint('DEBUG UPLOAD ERROR (Client side): $e');
+        debugPrint('StackTrace: $stackTrace');
         // Storage not configured or failed due to quota
         hasUploadFailed = true;
         success = false;

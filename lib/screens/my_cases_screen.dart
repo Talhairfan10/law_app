@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/case_model.dart';
 import '../services/case_service.dart';
+import '../services/notification_service.dart';
 import 'track_case_screen.dart';
 import 'placeholders.dart';
 
@@ -178,7 +179,7 @@ class _MyCasesScreenState extends State<MyCasesScreen> {
           ),
           if (userId != null)
             StreamBuilder<int>(
-              stream: CaseService.getUnreadNotificationCount(userId),
+              stream: NotificationService.getUnreadCount(userId),
               builder: (context, snapshot) {
                 final count = snapshot.data ?? 0;
                 if (count == 0) return const SizedBox.shrink();

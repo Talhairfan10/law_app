@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import 'home_dashboard_screen.dart';
 import 'complete_profile_screen.dart';
 import 'create_account_screen.dart';
+import 'lawyer/lawyer_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -55,9 +56,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
-        );
+        if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No account found with this email. Please sign up first.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -90,9 +97,15 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } on FirebaseAuthException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
-        );
+        if (e.code == 'user-not-found' || e.code == 'invalid-credential') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No account found for this Google account. Please sign up first.')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AuthService.getFirebaseAuthErrorMessage(e))),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -108,17 +121,42 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _navigateBasedOnProfile(User user) async {
+    if (mounted) {
+      // Show explicit loading state so it's not a silent guess
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Checking your account type...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+
     try {
       final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       if (doc.exists) {
+        final data = doc.data()!;
+        final userTypeRaw = data['userType'];
+        final userType = (userTypeRaw ?? '').toString().trim().toLowerCase();
+        
         if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
-            (route) => false,
-          );
+          // Strict check: Must exactly be 'lawyer' to go to Lawyer dashboard
+          if (userType == 'lawyer') {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const LawyerDashboardScreen()),
+              (route) => false,
+            );
+          } else {
+            // Default safe fallback is ALWAYS Client dashboard
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeDashboardScreen()),
+              (route) => false,
+            );
+          }
         }
       } else {
+        // Handle Google Sign-In for non-existent accounts: treat as new signup
         if (mounted) {
           Navigator.push(
             context,
