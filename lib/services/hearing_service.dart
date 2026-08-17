@@ -147,6 +147,44 @@ class HearingService {
     });
     debugPrint('HearingService: Added hearing ${docRef.id} to case $caseId');
 
+    final dateStr =
+        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+    // Update parent case timeline, status history, and activity log
+    try {
+      final statusEntry = {
+        'status': 'Hearing Scheduled',
+        'message':
+            'Hearing scheduled for $dateStr at $time ($courtName).${purpose.isNotEmpty ? ' Purpose: $purpose' : ''}',
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      final activityEntry = {
+        'type': 'hearing_scheduled',
+        'hearingId': docRef.id,
+        'courtName': courtName,
+        'courtRoom': courtRoom,
+        'date': dateStr,
+        'time': time,
+        'purpose': purpose,
+        'hearingType': hearingType,
+        'timestamp': DateTime.now().toIso8601String(),
+        'description': 'Hearing scheduled: $dateStr at $time ($courtName)',
+      };
+
+      await _firestore.collection('cases').doc(caseId).update({
+        'statusHistory': FieldValue.arrayUnion([statusEntry]),
+        'activityLog': FieldValue.arrayUnion([activityEntry]),
+        'caseProgress.caseStarted': {
+          'status': 'in_progress',
+          'note': 'Hearing scheduled: $dateStr at $time',
+          'completedAt': DateTime.now().toIso8601String(),
+        },
+        'status': 'in_progress',
+      });
+    } catch (e) {
+      debugPrint('HearingService: Could not update case timeline on addHearing: $e');
+    }
+
     // Trigger in-app notification to client
     try {
       final caseDoc = await _firestore.collection('cases').doc(caseId).get();
@@ -161,8 +199,6 @@ class HearingService {
         final formattedCaseId = (caseData?['caseId'] ?? caseId).toString();
 
         if (clientUserId != null && clientUserId.isNotEmpty) {
-          final dateStr =
-              '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
           await NotificationService.createNotification(
             userId: clientUserId,
             type: 'hearing',
@@ -182,7 +218,7 @@ class HearingService {
   }
 
   /// Marks a hearing as completed with optional outcome notes.
-  /// Also appends an activity log entry to the parent case document
+  /// Also appends an activity log entry and status history to the parent case document
   /// and sends a notification to the client.
   static Future<void> markHearingCompleted(
     String caseId,
@@ -196,42 +232,32 @@ class HearingService {
       'completedAt': FieldValue.serverTimestamp(),
     });
 
-    // 2. Append to case's activityLog array
+    // 2. Append to case's activityLog and statusHistory array
+    final statusEntry = {
+      'status': 'Hearing Completed',
+      'message':
+          'Hearing completed.${outcomeNotes.isNotEmpty ? ' Outcome: $outcomeNotes' : ''}',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+    final activityEntry = {
+      'type': 'hearing_completed',
+      'hearingId': hearingId,
+      'outcomeNotes': outcomeNotes,
+      'timestamp': DateTime.now().toIso8601String(),
+      'description':
+          'Hearing completed${outcomeNotes.isNotEmpty ? ': $outcomeNotes' : ''}',
+    };
+
     try {
       await _firestore.collection('cases').doc(caseId).update({
-        'activityLog': FieldValue.arrayUnion([
-          {
-            'type': 'hearing_completed',
-            'hearingId': hearingId,
-            'outcomeNotes': outcomeNotes,
-            'timestamp': Timestamp.now(),
-            'description':
-                'Hearing completed${outcomeNotes.isNotEmpty ? ': $outcomeNotes' : ''}',
-          }
-        ]),
+        'statusHistory': FieldValue.arrayUnion([statusEntry]),
+        'activityLog': FieldValue.arrayUnion([activityEntry]),
+        'caseProgress.caseStarted.note':
+            'Hearing completed${outcomeNotes.isNotEmpty ? ': $outcomeNotes' : ''}',
       });
     } catch (e) {
-      // If the case document doesn't have an activityLog field yet,
-      // set it as a new array
       debugPrint(
-          'HearingService: Could not arrayUnion activityLog, trying set: $e');
-      try {
-        await _firestore.collection('cases').doc(caseId).set({
-          'activityLog': [
-            {
-              'type': 'hearing_completed',
-              'hearingId': hearingId,
-              'outcomeNotes': outcomeNotes,
-              'timestamp': Timestamp.now(),
-              'description':
-                  'Hearing completed${outcomeNotes.isNotEmpty ? ': $outcomeNotes' : ''}',
-            }
-          ],
-        }, SetOptions(merge: true));
-      } catch (e2) {
-        debugPrint(
-            'HearingService: Failed to write activityLog entirely: $e2');
-      }
+          'HearingService: Could not update statusHistory/activityLog on case: $e');
     }
 
     // 3. Trigger in-app notification to client

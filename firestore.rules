@@ -1,32 +1,119 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny for all other collections
-    match /{document=**} {
-      allow read, write: if false;
+
+    // Helper functions for authentication & role checks
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // Allow authenticated users to read and write only their own user document
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        getUserData().userType == 'admin' ||
+        getUserData().userType == 'Admin' ||
+        getUserData().userType.lower() == 'admin'
+      );
+    }
+
+    function isCaseParticipant(caseId) {
+      let caseData = get(/databases/$(database)/documents/cases/$(caseId)).data;
+      return isSignedIn() && (
+        caseData.userId == request.auth.uid ||
+        caseData.assignedLawyer.lawyerId == request.auth.uid ||
+        caseData.assignedLawyer.uid == request.auth.uid ||
+        caseData.assignedLawyer.id == request.auth.uid ||
+        caseData.lawyerId == request.auth.uid ||
+        isAdmin()
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 1. Users Collection
+    // ─────────────────────────────────────────────────────────────
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Users can read/write their own profile; Admins can manage any user
+      allow read, write: if isOwner(userId) || isAdmin();
 
-      // Notifications subcollection — any signed-in user can create, owner can read/update/delete
+      // Notifications Subcollection (in-app notifications for client/lawyer)
       match /notifications/{notifId} {
-        allow create: if request.auth != null;
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+        // Any authenticated user can create notifications (e.g. lawyer notifying client of hearing)
+        allow create: if isSignedIn();
+        // Only owner or Admin can read, update, delete
+        allow read, update, delete: if isOwner(userId) || isAdmin();
       }
     }
 
-    // Cases collection — users can read/write only their own cases
+    // ─────────────────────────────────────────────────────────────
+    // 2. Cases Collection & Subcollections
+    // ─────────────────────────────────────────────────────────────
     match /cases/{caseId} {
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      // Tightened Creation: Must set userId to caller's auth.uid (unless Admin)
+      allow create: if isSignedIn() && (
+        request.resource.data.userId == request.auth.uid || isAdmin()
+      );
 
-      // Hearings subcollection
+      // Read/Update/Delete: Allowed for case client, assigned lawyer, or Admin
+      allow read, update, delete: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.assignedLawyer.lawyerId == request.auth.uid ||
+        resource.data.assignedLawyer.uid == request.auth.uid ||
+        resource.data.assignedLawyer.id == request.auth.uid ||
+        resource.data.lawyerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Hearings Subcollection (Lawyer Hearing Schedule & Client Case Timeline)
       match /hearings/{hearingId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isCaseParticipant(caseId);
       }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. Chats & Support Messages Collection
+    // ─────────────────────────────────────────────────────────────
+    match /chats/{chatId} {
+      // Create chat thread if caller is a participant or Admin
+      allow create: if isSignedIn();
+
+      // Read/Update/Delete chat thread if participant or Admin
+      allow read, update, delete: if isSignedIn() && (
+        request.auth.uid in resource.data.participantIds ||
+        resource.data.userId == request.auth.uid ||
+        resource.data.lawyerId == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Messages Subcollection under a Chat
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. Platform Reviews Collection
+    // ─────────────────────────────────────────────────────────────
+    match /reviews/{reviewId} {
+      // Anyone signed in can read reviews
+      allow read: if isSignedIn();
+      // Signed-in users can submit a review
+      allow create: if isSignedIn();
+      // Only Admins can moderate, update, or delete reviews
+      allow update, delete: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. Admin Notifications Log Collection
+    // ─────────────────────────────────────────────────────────────
+    match /notifications_log/{logId} {
+      allow read, write: if isAdmin();
     }
   }
 }

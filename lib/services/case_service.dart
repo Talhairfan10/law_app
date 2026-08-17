@@ -228,7 +228,8 @@ class CaseService {
   /// Returns a real-time stream of all cases assigned to [lawyerId],
   /// checking both top-level `lawyerId` and nested `assignedLawyer.lawyerId`.
   /// Returns a real-time stream of all cases assigned to [lawyerId],
-  /// checking top-level `lawyerId`, nested `assignedLawyer.lawyerId`, and `assignedLawyer.uid`.
+  /// checking top-level `lawyerId`, nested `assignedLawyer.lawyerId`, `assignedLawyer.uid`,
+  /// `assignedLawyer.id`, `assignedLawyerId`, and lawyer name/email matching.
   /// Ordered by creation date (newest first) via client-side sort.
   static Stream<List<CaseModel>> getLawyerCases(String lawyerId) {
     if (lawyerId.isEmpty) {
@@ -236,76 +237,144 @@ class CaseService {
       return Stream.value([]);
     }
 
-    final stream1 = _casesRef
-        .where('assignedLawyer.lawyerId', isEqualTo: lawyerId)
-        .snapshots();
-    final stream2 =
-        _casesRef.where('lawyerId', isEqualTo: lawyerId).snapshots();
-    final stream3 =
-        _casesRef.where('assignedLawyer.uid', isEqualTo: lawyerId).snapshots();
-
+    late StreamController<List<CaseModel>> controller;
+    final List<StreamSubscription> subscriptions = [];
+    final Map<String, CaseModel> casesMap = {};
     int emissionCount = 0;
 
-    late StreamController<List<CaseModel>> controller;
-    StreamSubscription? sub1;
-    StreamSubscription? sub2;
-    StreamSubscription? sub3;
-    final Map<String, CaseModel> casesMap = {};
+    void emitUpdatedList() {
+      emissionCount++;
+      final list = casesMap.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      debugPrint(
+          '[CaseService] getLawyerCases emission #$emissionCount for lawyerId="$lawyerId": ${list.length} cases found.');
+      if (!controller.isClosed) {
+        controller.add(list);
+      }
+    }
 
-    controller = StreamController<List<CaseModel>>.broadcast(
-      onListen: () {
-        void emitUpdatedList() {
-          emissionCount++;
-          final list = casesMap.values.toList()
-            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          debugPrint(
-              '[CaseService] getLawyerCases emission #$emissionCount for lawyerId="$lawyerId": ${list.length} cases found.');
-          if (!controller.isClosed) {
-            controller.add(list);
+    void addSubscription(Stream<QuerySnapshot> stream, String label) {
+      final sub = stream.listen((snapshot) {
+        debugPrint('[CaseService] $label emitted ${snapshot.docs.length} docs');
+        for (final doc in snapshot.docs) {
+          try {
+            casesMap[doc.id] = CaseModel.fromFirestore(doc);
+          } catch (e) {
+            debugPrint('[CaseService] Error parsing case ${doc.id}: $e');
           }
         }
+        emitUpdatedList();
+      }, onError: (e) {
+        debugPrint('[CaseService] $label Error: $e');
+      });
+      subscriptions.add(sub);
+    }
 
-        sub1 = stream1.listen((snapshot) {
-          debugPrint(
-              '[CaseService] Stream 1 (assignedLawyer.lawyerId) emitted ${snapshot.docs.length} docs');
-          for (final doc in snapshot.docs) {
-            casesMap[doc.id] = CaseModel.fromFirestore(doc);
-          }
-          emitUpdatedList();
-        }, onError: (e) {
-          debugPrint('[CaseService] Stream 1 Error: $e');
-        });
+    controller = StreamController<List<CaseModel>>.broadcast(
+      onListen: () async {
+        // 1. Direct ID matching streams
+        addSubscription(
+            _casesRef.where('assignedLawyer.lawyerId', isEqualTo: lawyerId).snapshots(),
+            'Stream (assignedLawyer.lawyerId)');
+        addSubscription(
+            _casesRef.where('lawyerId', isEqualTo: lawyerId).snapshots(),
+            'Stream (lawyerId)');
+        addSubscription(
+            _casesRef.where('assignedLawyer.uid', isEqualTo: lawyerId).snapshots(),
+            'Stream (assignedLawyer.uid)');
+        addSubscription(
+            _casesRef.where('assignedLawyer.id', isEqualTo: lawyerId).snapshots(),
+            'Stream (assignedLawyer.id)');
+        addSubscription(
+            _casesRef.where('assignedLawyerId', isEqualTo: lawyerId).snapshots(),
+            'Stream (assignedLawyerId)');
 
-        sub2 = stream2.listen((snapshot) {
-          debugPrint(
-              '[CaseService] Stream 2 (lawyerId) emitted ${snapshot.docs.length} docs');
-          for (final doc in snapshot.docs) {
-            casesMap[doc.id] = CaseModel.fromFirestore(doc);
-          }
-          emitUpdatedList();
-        }, onError: (e) {
-          debugPrint('[CaseService] Stream 2 Error: $e');
-        });
+        // 2. Fetch lawyer user profile to match by name and email if available
+        try {
+          final userDoc = await _firestore.collection('users').doc(lawyerId).get();
+          final userData = userDoc.data() ?? {};
+          final fullName = (userData['fullName'] ?? userData['name'] ?? '').toString().trim();
+          final email = (userData['email'] ?? '').toString().trim();
 
-        sub3 = stream3.listen((snapshot) {
-          debugPrint(
-              '[CaseService] Stream 3 (assignedLawyer.uid) emitted ${snapshot.docs.length} docs');
-          for (final doc in snapshot.docs) {
-            casesMap[doc.id] = CaseModel.fromFirestore(doc);
+          if (fullName.isNotEmpty) {
+            addSubscription(
+                _casesRef.where('assignedLawyer.name', isEqualTo: fullName).snapshots(),
+                'Stream (assignedLawyer.name: $fullName)');
+            addSubscription(
+                _casesRef.where('assignedLawyer.fullName', isEqualTo: fullName).snapshots(),
+                'Stream (assignedLawyer.fullName: $fullName)');
           }
-          emitUpdatedList();
-        }, onError: (e) {
-          debugPrint('[CaseService] Stream 3 Error: $e');
-        });
+          if (email.isNotEmpty) {
+            addSubscription(
+                _casesRef.where('assignedLawyer.email', isEqualTo: email).snapshots(),
+                'Stream (assignedLawyer.email: $email)');
+          }
+
+          // 3. Auto-link un-normalized cases in background
+          _autoLinkCasesForLawyer(lawyerId: lawyerId, lawyerName: fullName, lawyerEmail: email);
+        } catch (e) {
+          debugPrint('[CaseService] Error resolving lawyer profile for queries: $e');
+        }
       },
       onCancel: () {
-        sub1?.cancel();
-        sub2?.cancel();
-        sub3?.cancel();
+        for (final sub in subscriptions) {
+          sub.cancel();
+        }
+        subscriptions.clear();
       },
     );
 
     return controller.stream;
+  }
+
+  /// Automatically scans cases and links any case assigned to this lawyer
+  /// by name, email, or partial ID by populating `lawyerId` and `assignedLawyer.lawyerId`.
+  static Future<void> _autoLinkCasesForLawyer({
+    required String lawyerId,
+    required String lawyerName,
+    required String lawyerEmail,
+  }) async {
+    try {
+      final snap = await _casesRef.get();
+      final lowerName = lawyerName.toLowerCase().trim();
+      final lowerEmail = lawyerEmail.toLowerCase().trim();
+
+      for (final doc in snap.docs) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        final assigned = data['assignedLawyer'] as Map<String, dynamic>?;
+        final topLawyerId = (data['lawyerId'] ?? '').toString();
+
+        bool isMatch = false;
+
+        if (assigned != null && assigned.isNotEmpty) {
+          final aId = (assigned['lawyerId'] ?? assigned['uid'] ?? assigned['id'] ?? '').toString();
+          final aName = (assigned['name'] ?? assigned['fullName'] ?? '').toString().toLowerCase().trim();
+          final aEmail = (assigned['email'] ?? '').toString().toLowerCase().trim();
+
+          if (aId == lawyerId) isMatch = true;
+          if (lowerName.isNotEmpty && (aName == lowerName || (lowerName.length > 2 && aName.contains(lowerName)))) {
+            isMatch = true;
+          }
+          if (lowerEmail.isNotEmpty && aEmail == lowerEmail) isMatch = true;
+        }
+
+        if (topLawyerId == lawyerId) isMatch = true;
+
+        if (isMatch) {
+          final curAssignedId = assigned?['lawyerId']?.toString() ?? '';
+          if (topLawyerId != lawyerId || curAssignedId != lawyerId) {
+            await doc.reference.update({
+              'lawyerId': lawyerId,
+              'assignedLawyer.lawyerId': lawyerId,
+              'assignedLawyer.uid': lawyerId,
+            });
+            debugPrint('[CaseService] Auto-linked case ${doc.id} to lawyer $lawyerId');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[CaseService] _autoLinkCasesForLawyer error: $e');
+    }
   }
 
   /// Auto-migration helper to normalize existing case documents in Firestore.
@@ -323,7 +392,7 @@ class CaseService {
 
         if (assigned != null && assigned.isNotEmpty) {
           final assignedLawyerId =
-              (assigned['lawyerId'] ?? assigned['uid'] ?? '').toString();
+              (assigned['lawyerId'] ?? assigned['uid'] ?? assigned['id'] ?? '').toString();
           final effectiveLawyerId =
               assignedLawyerId.isNotEmpty ? assignedLawyerId : topLawyerId;
 
@@ -337,6 +406,7 @@ class CaseService {
             }
             if (assignedLawyerId != effectiveLawyerId) {
               updates['assignedLawyer.lawyerId'] = effectiveLawyerId;
+              updates['assignedLawyer.uid'] = effectiveLawyerId;
               needsUpdate = true;
             }
 
