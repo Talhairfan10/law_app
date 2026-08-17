@@ -39,10 +39,44 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
 
   String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
+  String? _initializedUid;
+  Stream<int>? _unreadNotifsStream;
+  Stream<int>? _assignedCasesStream;
+  Stream<int>? _inProgressCasesStream;
+  Stream<int>? _completedCasesStream;
+  Stream<int>? _todaysHearingsCountStream;
+  Stream<List<Map<String, dynamic>>>? _todaysHearingsStream;
+  Stream<dynamic>? _recentNotificationsStream;
+
+  void _ensureStreamsInitialized() {
+    final uid = _currentUid;
+    if (uid.isNotEmpty && _initializedUid != uid) {
+      _initializedUid = uid;
+      debugPrint('[LawyerDashboardScreen] Initializing cached streams for uid: $uid');
+      _unreadNotifsStream = NotificationService.getUnreadCount(uid);
+      _assignedCasesStream = CaseService.getLawyerCaseCount(uid);
+      _inProgressCasesStream = CaseService.getLawyerCaseCountByStatus(
+          uid, ['active', 'in_progress', 'lawyer_assigned']);
+      _completedCasesStream =
+          CaseService.getLawyerCaseCountByStatus(uid, ['completed']);
+      _todaysHearingsCountStream = HearingService.getTodaysHearingsCount(uid);
+      _todaysHearingsStream = HearingService.getTodaysHearings(uid);
+      _recentNotificationsStream =
+          NotificationService.getNotificationsStream(uid);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _ensureStreamsInitialized();
     _fetchLawyerProfile();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureStreamsInitialized();
   }
 
   Future<void> _fetchLawyerProfile() async {
@@ -74,6 +108,8 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureStreamsInitialized();
+
     final List<Widget> pages = [
       _buildDashboardView(),
       const LawyerCasesScreen(),
@@ -281,9 +317,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
           GestureDetector(
             onTap: () => setState(() => _currentIndex = 3),
             child: StreamBuilder<int>(
-              stream: _currentUid.isNotEmpty
-                  ? NotificationService.getUnreadCount(_currentUid)
-                  : const Stream<int>.empty(),
+              stream: _unreadNotifsStream ?? const Stream<int>.empty(),
               builder: (context, snapshot) {
                 final count = snapshot.data ?? 0;
                 return Stack(
@@ -426,7 +460,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
                 iconColor: _gold,
                 iconBg: const Color(0xFFFFF5E0),
                 label: 'Assigned\nCases',
-                stream: CaseService.getLawyerCaseCount(_currentUid),
+                stream: _assignedCasesStream ?? const Stream<int>.empty(),
               ),
               const SizedBox(width: 10),
               _buildStatCard(
@@ -434,8 +468,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
                 iconColor: _blueAccent,
                 iconBg: const Color(0xFFE3F0FB),
                 label: 'In Progress',
-                stream: CaseService.getLawyerCaseCountByStatus(
-                    _currentUid, ['active', 'in_progress', 'lawyer_assigned']),
+                stream: _inProgressCasesStream ?? const Stream<int>.empty(),
               ),
               const SizedBox(width: 10),
               _buildStatCard(
@@ -443,8 +476,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
                 iconColor: _greenAccent,
                 iconBg: const Color(0xFFE5F7EF),
                 label: 'Completed',
-                stream: CaseService.getLawyerCaseCountByStatus(
-                    _currentUid, ['completed']),
+                stream: _completedCasesStream ?? const Stream<int>.empty(),
               ),
               const SizedBox(width: 10),
               _buildStatCard(
@@ -452,7 +484,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
                 iconColor: _purpleAccent,
                 iconBg: const Color(0xFFEEE9FB),
                 label: "Today's\nHearings",
-                stream: HearingService.getTodaysHearingsCount(_currentUid),
+                stream: _todaysHearingsCountStream ?? const Stream<int>.empty(),
               ),
             ],
           ),
@@ -554,7 +586,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
           ),
           const SizedBox(height: 12),
           StreamBuilder<List<Map<String, dynamic>>>(
-            stream: HearingService.getTodaysHearings(_currentUid),
+            stream: _todaysHearingsStream ?? const Stream.empty(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(
@@ -741,9 +773,7 @@ class _LawyerDashboardScreenState extends State<LawyerDashboardScreen> {
           ),
           const SizedBox(height: 12),
           StreamBuilder(
-            stream: _currentUid.isNotEmpty
-                ? NotificationService.getNotificationsStream(_currentUid)
-                : const Stream.empty(),
+            stream: _recentNotificationsStream ?? const Stream.empty(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(

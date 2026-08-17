@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/case_model.dart';
 import '../services/case_service.dart';
+import '../services/hearing_service.dart';
 import 'case_updates_sheet.dart';
 import 'placeholders.dart';
 
@@ -97,7 +100,10 @@ class _TrackCaseBody extends StatelessWidget {
               child: Column(
                 children: [
                   _buildCaseInfoCard(),
+                  _buildNextHearingCard(),
                   _buildProgressSection(context),
+                  _buildHearingHistorySection(context),
+                  _buildCaseDocumentsSection(context),
                   _buildLatestUpdateSection(context),
                   _buildAssignedLawyerSection(context),
                   _buildNeedHelpButton(context),
@@ -539,6 +545,301 @@ class _TrackCaseBody extends StatelessWidget {
   }
 
   // ─────────────────────────────────────────────────
+  //  Case Documents Section
+  // ─────────────────────────────────────────────────
+  //  Case Documents Section (View Documents)
+  // ─────────────────────────────────────────────────
+
+  Widget _buildCaseDocumentsSection(BuildContext context) {
+    final docs = caseData.documentUrls;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF0ECFD),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.folder_outlined,
+                        color: _primary, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'View Documents',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _dark,
+                        ),
+                      ),
+                      Text(
+                        'Uploaded case files & evidence',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: _grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${docs.length} ${docs.length == 1 ? 'file' : 'files'}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (docs.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No documents uploaded yet for this case.',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: _grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            ...docs.map((doc) => _buildClientDocumentCard(context, doc)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClientDocumentCard(
+      BuildContext context, Map<String, dynamic> doc) {
+    final name = (doc['name'] ?? doc['title'] ?? doc['fileName'] ?? 'Document').toString();
+    final url = (doc['url'] ??
+            doc['secure_url'] ??
+            doc['downloadUrl'] ??
+            doc['path'] ??
+            '')
+        .toString();
+    final rawSize = doc['sizeLabel'] ?? doc['size'] ?? doc['fileSize'];
+    String sizeStr = '';
+    if (rawSize is num) {
+      sizeStr = _formatFileSize(rawSize.toInt());
+    } else if (rawSize != null) {
+      sizeStr = rawSize.toString();
+    }
+
+    final docType =
+        (doc['documentType'] ?? doc['type'] ?? 'General').toString();
+    final uploadedBy = (doc['uploadedBy'] ?? 'Client').toString();
+    final uploadedAtStr = (doc['uploadedAt'] ?? doc['date'] ?? doc['createdAt'] ?? '').toString();
+
+    String ext = (doc['extension'] ?? '').toString().toLowerCase();
+    if (ext.isEmpty && name.contains('.')) {
+      ext = name.split('.').last.toLowerCase();
+    }
+
+    IconData fileIcon;
+    Color fileColor;
+    switch (ext) {
+      case 'pdf':
+        fileIcon = Icons.picture_as_pdf_rounded;
+        fileColor = const Color(0xFFE05252);
+        break;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        fileIcon = Icons.image_outlined;
+        fileColor = const Color(0xFF2EAD6E);
+        break;
+      case 'doc':
+      case 'docx':
+        fileIcon = Icons.description_outlined;
+        fileColor = const Color(0xFF3A82C4);
+        break;
+      default:
+        fileIcon = Icons.insert_drive_file_outlined;
+        fileColor = const Color(0xFFE6A817);
+    }
+
+    String dateLabel = '';
+    if (uploadedAtStr.isNotEmpty) {
+      final dt = DateTime.tryParse(uploadedAtStr);
+      if (dt != null) {
+        dateLabel = DateFormat('dd MMM yyyy').format(dt);
+      }
+    }
+    if (dateLabel.isEmpty) {
+      dateLabel = DateFormat('dd MMM yyyy').format(caseData.createdAt);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFEFEFEF)),
+      ),
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        onTap: () => _openDocumentUrl(context, url),
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: fileColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(fileIcon, color: fileColor, size: 22),
+        ),
+        title: Text(
+          name,
+          style: GoogleFonts.poppins(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _dark,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                if (ext.isNotEmpty || sizeStr.isNotEmpty)
+                  Text(
+                    '${ext.isNotEmpty ? ext.toUpperCase() : 'FILE'}${sizeStr.isNotEmpty ? ' • $sizeStr' : ''}',
+                    style: GoogleFonts.poppins(fontSize: 11, color: _grey),
+                  ),
+                if (docType != 'General' && docType.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: _primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      docType,
+                      style: GoogleFonts.poppins(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: _primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            Text(
+              'Uploaded by $uploadedBy • $dateLabel',
+              style: GoogleFonts.poppins(fontSize: 10, color: _grey),
+            ),
+          ],
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: _primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child:
+              const Icon(Icons.open_in_new_rounded, size: 18, color: _primary),
+        ),
+      ),
+    );
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  Future<void> _openDocumentUrl(BuildContext context, String url) async {
+    final cleanUrl = url.trim();
+    if (cleanUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Document URL is empty or unavailable.',
+              style: GoogleFonts.poppins()),
+          backgroundColor: const Color(0xFFE05252),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(cleanUrl);
+    if (uri != null) {
+      try {
+        final launched =
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!launched && context.mounted) {
+          await launchUrl(uri, mode: LaunchMode.platformDefault);
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open document link.',
+                  style: GoogleFonts.poppins()),
+              backgroundColor: const Color(0xFFE05252),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid document URL format.',
+                style: GoogleFonts.poppins()),
+            backgroundColor: const Color(0xFFE05252),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────
   //  Latest Update Section
   // ─────────────────────────────────────────────────
 
@@ -925,8 +1226,583 @@ class _TrackCaseBody extends StatelessWidget {
   }
 
   // ─────────────────────────────────────────────────
+  //  Next Hearing Card (Real-time Stream)
+  // ─────────────────────────────────────────────────
+
+  Widget _buildNextHearingCard() {
+    return StreamBuilder<Map<String, dynamic>?>(
+      stream: HearingService.getNextHearingForCase(caseData.docId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const SizedBox.shrink();
+        }
+
+        final hearing = snapshot.data!;
+        final hearingDate = _parseDateTime(hearing['date']);
+        if (hearingDate == null) return const SizedBox.shrink();
+
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final hDay =
+            DateTime(hearingDate.year, hearingDate.month, hearingDate.day);
+        final daysDiff = hDay.difference(today).inDays;
+
+        String countdownLabel;
+        Color countdownBg;
+        Color countdownColor;
+
+        if (daysDiff == 0) {
+          countdownLabel = 'TODAY';
+          countdownBg = const Color(0xFFFFECEB);
+          countdownColor = const Color(0xFFE05252);
+        } else if (daysDiff == 1) {
+          countdownLabel = 'TOMORROW';
+          countdownBg = const Color(0xFFFFF3E0);
+          countdownColor = const Color(0xFFF57C00);
+        } else if (daysDiff > 1) {
+          countdownLabel = 'IN $daysDiff DAYS';
+          countdownBg = const Color(0xFFF0ECFD);
+          countdownColor = _primary;
+        } else {
+          countdownLabel = 'UPCOMING';
+          countdownBg = const Color(0xFFF0ECFD);
+          countdownColor = _primary;
+        }
+
+        final time = (hearing['time'] ?? '10:00 AM').toString();
+        final courtName = (hearing['courtName'] ?? 'Court').toString();
+        final courtRoom = (hearing['courtRoom'] ?? '').toString();
+        final hearingType = (hearing['hearingType'] ?? 'Hearing').toString();
+        final purpose = (hearing['purpose'] ?? '').toString();
+        final notes = (hearing['notes'] ?? '').toString();
+        final formattedDate =
+            DateFormat('EEEE, dd MMM yyyy').format(hearingDate);
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _primary.withValues(alpha: 0.15)),
+            boxShadow: [
+              BoxShadow(
+                color: _primary.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: _primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.event_note_rounded,
+                            color: _primary, size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Next Court Hearing',
+                            style: GoogleFonts.poppins(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: _dark,
+                            ),
+                          ),
+                          Text(
+                            'Upcoming scheduled appearance',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: _grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: countdownBg,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      countdownLabel,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: countdownColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+              const SizedBox(height: 14),
+
+              // Date & Time Grid
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today_rounded,
+                              color: _primary, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Date',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 10, color: _grey),
+                                ),
+                                Text(
+                                  formattedDate,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _dark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAFAFA),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFEEEEEE)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time_rounded,
+                              color: _primary, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Time',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 10, color: _grey),
+                                ),
+                                Text(
+                                  time,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: _dark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Court details
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFAFAFA),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFEEEEEE)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.account_balance_rounded,
+                        color: _primary, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Court & Room',
+                            style: GoogleFonts.poppins(
+                                fontSize: 10, color: _grey),
+                          ),
+                          Text(
+                            courtRoom.isNotEmpty
+                                ? '$courtName • $courtRoom'
+                                : courtName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _dark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (hearingType.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: _primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          hearingType,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: _primary,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              // Purpose / Note if present
+              if (purpose.isNotEmpty || notes.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9F9FB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFEEEEEE)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.info_outline_rounded,
+                          color: _grey, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          purpose.isNotEmpty ? purpose : notes,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: const Color(0xFF4A4A5A),
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────────
+  //  Hearing History Section (Completed Hearings)
+  // ─────────────────────────────────────────────────
+
+  Widget _buildHearingHistorySection(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: HearingService.getCompletedHearingsForCase(caseData.docId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        final hearings = snapshot.data!;
+
+        return Container(
+          margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFE5F7EF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.history_edu_rounded,
+                            color: Color(0xFF2EAD6E), size: 20),
+                      ),
+                      const SizedBox(width: 10),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hearing History',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: _dark,
+                            ),
+                          ),
+                          Text(
+                            'Past hearings & court outcomes',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: _grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2EAD6E).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${hearings.length} completed',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2EAD6E),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Completed hearing list
+              ...hearings.map((h) => _buildCompletedHearingCard(context, h)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCompletedHearingCard(
+      BuildContext context, Map<String, dynamic> h) {
+    final hearingDate = _parseDateTime(h['date']);
+    final dateStr = hearingDate != null
+        ? DateFormat('dd MMM yyyy').format(hearingDate)
+        : 'Past Date';
+    final timeStr = (h['time'] ?? '').toString();
+    final courtName = (h['courtName'] ?? 'Court').toString();
+    final courtRoom = (h['courtRoom'] ?? '').toString();
+    final hearingType = (h['hearingType'] ?? 'Hearing').toString();
+    final purpose = (h['purpose'] ?? '').toString();
+    final outcomeNotes = (h['outcomeNotes'] ?? '').toString();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFA),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFEEEEEE)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: date + type + completed badge
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  hearingType,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: _primary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$dateStr${timeStr.isNotEmpty ? ' • $timeStr' : ''}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _dark,
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle_rounded,
+                      size: 14, color: Color(0xFF2EAD6E)),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Completed',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF2EAD6E),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Court info
+          Row(
+            children: [
+              const Icon(Icons.account_balance_outlined,
+                  size: 14, color: _grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  courtRoom.isNotEmpty
+                      ? '$courtName ($courtRoom)'
+                      : courtName,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: _grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          if (purpose.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              'Purpose: $purpose',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: _grey,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+
+          // Outcome notes box
+          if (outcomeNotes.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5F7EF).withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: const Color(0xFF2EAD6E).withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.rate_review_outlined,
+                          size: 13, color: Color(0xFF2EAD6E)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'Hearing Outcome / Notes',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF2EAD6E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    outcomeNotes,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: const Color(0xFF2C3E50),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────
   //  Helpers
   // ─────────────────────────────────────────────────
+
+  DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
 
   String _formatFee(double fee) {
     if (fee >= 1000) {

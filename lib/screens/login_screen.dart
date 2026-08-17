@@ -139,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
         final userType = (userTypeRaw ?? '').toString().trim().toLowerCase();
         
         if (mounted) {
-          // Strict check: Must exactly be 'lawyer' to go to Lawyer dashboard
+          // Role-based routing (case-insensitive)
           if (userType == 'lawyer') {
             Navigator.pushAndRemoveUntil(
               context,

@@ -26,6 +26,18 @@ class _LawyerCasesScreenState extends State<LawyerCasesScreen>
 
   String get _currentUid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
+  String? _initializedUid;
+  Stream<List<CaseModel>>? _casesStream;
+
+  void _ensureStreamInitialized() {
+    final uid = _currentUid;
+    if (uid.isNotEmpty && _initializedUid != uid) {
+      _initializedUid = uid;
+      debugPrint('[LawyerCasesScreen] Initializing cached cases stream for uid: $uid');
+      _casesStream = CaseService.getLawyerCases(uid);
+    }
+  }
+
   final List<String> _tabLabels = ['All', 'In Progress', 'Pending', 'Completed'];
   final List<List<String>> _tabStatuses = [
     [], // all
@@ -37,10 +49,17 @@ class _LawyerCasesScreenState extends State<LawyerCasesScreen>
   @override
   void initState() {
     super.initState();
+    _ensureStreamInitialized();
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _ensureStreamInitialized();
   }
 
   @override
@@ -187,9 +206,10 @@ class _LawyerCasesScreenState extends State<LawyerCasesScreen>
   }
 
   Widget _buildCasesList() {
+    _ensureStreamInitialized();
     return Expanded(
       child: StreamBuilder<List<CaseModel>>(
-        stream: CaseService.getLawyerCases(_currentUid),
+        stream: _casesStream ?? const Stream.empty(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(strokeWidth: 2));

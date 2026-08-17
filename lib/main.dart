@@ -89,7 +89,7 @@ class MashviraApp extends StatelessWidget {
                     final userTypeRaw = typeSnap.data;
                     final userType = (userTypeRaw ?? '').toString().trim().toLowerCase();
                     
-                    // Strict check: Must exactly be 'lawyer'
+                    // Role-based routing (case-insensitive)
                     if (userType == 'lawyer') {
                       return const LawyerDashboardScreen();
                     }

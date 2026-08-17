@@ -57,13 +57,17 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
 
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) throw Exception('Not authenticated');
+      debugPrint('Step5ReviewScreen: Submitting case for user UID: $uid');
+      if (uid == null) throw Exception('Not authenticated - currentUser is null');
 
-      await CaseService.submitCase(
+      final docId = await CaseService.submitCase(
         data: widget.caseData,
         userId: uid,
-      ).then((docId) async {
-        // Fetch the generated human-readable caseId from the document
+      );
+
+      debugPrint('Step5ReviewScreen: Case created successfully with docId: $docId');
+
+      try {
         final caseDoc = await CaseService.getCaseById(docId);
         final humanCaseId = caseDoc?.caseId;
 
@@ -75,19 +79,23 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
               'Your case has been submitted and is pending lawyer assignment.',
           caseId: humanCaseId,
         );
-      });
+      } catch (notifError) {
+        debugPrint('Step5ReviewScreen: Notification creation warning: $notifError');
+      }
 
       if (mounted) {
         setState(() => _isSubmitting = false);
         _showSuccessDialog();
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Step5ReviewScreen: ERROR SUBMITTING CASE: $e');
+      debugPrint('StackTrace: $stackTrace');
       if (mounted) {
         setState(() => _isSubmitting = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to submit case. Please try again.',
+              'Failed to submit case: $e',
               style: GoogleFonts.poppins(),
             ),
             backgroundColor: Colors.redAccent,
@@ -226,9 +234,7 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
                     _buildSummaryCard(
                       icon: Icons.info_outline_rounded,
                       topLabel: 'Additional Information',
-                      mainText: data.additionalInfo.length > 80
-                          ? '${data.additionalInfo.substring(0, 80)}...'
-                          : data.additionalInfo,
+                      mainText: data.additionalInfo,
                       subText: null,
                       onEdit: () => _editStep2(context),
                     ),
@@ -497,12 +503,15 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Text(
-                      mainText,
-                      style: GoogleFonts.poppins(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF1A1A2E),
+                    Expanded(
+                      child: Text(
+                        mainText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1A1A2E),
+                        ),
+                        softWrap: true,
                       ),
                     ),
                     if (badge != null) ...[
@@ -534,6 +543,7 @@ class _Step5ReviewScreenState extends State<Step5ReviewScreen> {
                       fontSize: 12,
                       color: const Color(0xFF8E8E93),
                     ),
+                    softWrap: true,
                   ),
                 ],
               ],

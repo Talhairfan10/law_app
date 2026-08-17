@@ -62,6 +62,14 @@ class NotificationModel {
   Color get iconBackgroundColor {
     final lowerTitle = title.toLowerCase();
 
+    // Hearing subtypes
+    if (type == 'hearing' || lowerTitle.contains('hearing')) {
+      if (type == 'hearing_completed' || lowerTitle.contains('completed')) {
+        return const Color(0xFFE8F5E9);
+      }
+      return const Color(0xFFF2F0FE);
+    }
+
     // Case-update subtypes
     if (lowerTitle.contains('accepted')) return const Color(0xFFE8F5E9);
     if (lowerTitle.contains('scheduled') || lowerTitle.contains('consultation')) {
@@ -94,6 +102,14 @@ class NotificationModel {
   Color get iconColor {
     final lowerTitle = title.toLowerCase();
 
+    // Hearing subtypes
+    if (type == 'hearing' || lowerTitle.contains('hearing')) {
+      if (type == 'hearing_completed' || lowerTitle.contains('completed')) {
+        return const Color(0xFF2EAD6E);
+      }
+      return const Color(0xFF6C5CE7);
+    }
+
     if (lowerTitle.contains('accepted')) return const Color(0xFF4CAF50);
     if (lowerTitle.contains('scheduled') || lowerTitle.contains('consultation')) {
       return const Color(0xFF6C5CE7);
@@ -119,6 +135,14 @@ class NotificationModel {
   /// Returns the appropriate icon for this notification.
   IconData get icon {
     final lowerTitle = title.toLowerCase();
+
+    // Hearing subtypes
+    if (type == 'hearing' || lowerTitle.contains('hearing')) {
+      if (type == 'hearing_completed' || lowerTitle.contains('completed')) {
+        return Icons.event_available_rounded;
+      }
+      return Icons.event_note_rounded;
+    }
 
     if (lowerTitle.contains('accepted')) return Icons.verified_user_rounded;
     if (lowerTitle.contains('scheduled') || lowerTitle.contains('consultation')) {

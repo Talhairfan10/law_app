@@ -10,9 +10,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // Notifications subcollection — users can read/update their own notifications
+      // Notifications subcollection — any signed-in user can create, owner can read/update/delete
       match /notifications/{notifId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null;
+        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 
@@ -21,6 +22,11 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+
+      // Hearings subcollection
+      match /hearings/{hearingId} {
+        allow read, write: if request.auth != null;
+      }
     }
   }
 }

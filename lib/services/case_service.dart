@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
@@ -66,115 +68,122 @@ class CaseService {
     required NewCaseData data,
     required String userId,
   }) async {
-    // 1. Generate human-readable Case ID
-    final caseId = await _generateCaseId(data.category);
+    try {
+      // 1. Generate human-readable Case ID
+      final caseId = await _generateCaseId(data.category);
 
-    // 2. Build initial caseProgress — first two steps completed
-    final now = DateTime.now();
-    final bool hasDocuments = data.uploadedFiles.isNotEmpty;
+      // 2. Build initial caseProgress — first two steps completed
+      final now = DateTime.now();
+      final bool hasDocuments = data.uploadedFiles.isNotEmpty;
 
-    final Map<String, dynamic> caseProgress = {
-      'caseSubmitted': {
-        'status': 'completed',
-        'completedAt': now.toIso8601String(),
-        'note': '${_formatDate(now)} • ${_formatTime(now)}',
-      },
-      'documentsUploaded': {
-        'status': hasDocuments ? 'completed' : 'pending',
-        'completedAt': hasDocuments ? now.toIso8601String() : null,
-        'note': hasDocuments
-            ? '${data.uploadedFiles.length} Document${data.uploadedFiles.length > 1 ? 's' : ''}'
-            : 'No documents uploaded yet',
-      },
-      'companyReview': {
-        'status': 'in_progress',
-        'completedAt': null,
-        'note': 'Our legal team is reviewing your case',
-      },
-      'lawyerAssignment': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-      'lawyerFeeReview': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-      'payment': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-      'lawyerContact': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-      'caseStarted': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-      'caseCompleted': {
-        'status': 'pending',
-        'completedAt': null,
-        'note': 'Pending',
-      },
-    };
+      final Map<String, dynamic> caseProgress = {
+        'caseSubmitted': {
+          'status': 'completed',
+          'completedAt': now.toIso8601String(),
+          'note': '${_formatDate(now)} • ${_formatTime(now)}',
+        },
+        'documentsUploaded': {
+          'status': hasDocuments ? 'completed' : 'pending',
+          'completedAt': hasDocuments ? now.toIso8601String() : null,
+          'note': hasDocuments
+              ? '${data.uploadedFiles.length} Document${data.uploadedFiles.length > 1 ? 's' : ''}'
+              : 'No documents uploaded yet',
+        },
+        'companyReview': {
+          'status': 'in_progress',
+          'completedAt': null,
+          'note': 'Our legal team is reviewing your case',
+        },
+        'lawyerAssignment': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+        'lawyerFeeReview': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+        'payment': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+        'lawyerContact': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+        'caseStarted': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+        'caseCompleted': {
+          'status': 'pending',
+          'completedAt': null,
+          'note': 'Pending',
+        },
+      };
 
-    // 3. Build initial status history
-    final List<Map<String, dynamic>> statusHistory = [
-      {
-        'status': 'Case Submitted',
-        'message':
-            'Your case has been submitted successfully. Our legal team will review it shortly.',
-        'timestamp': now.toIso8601String(),
-      },
-      if (hasDocuments)
+      // 3. Build initial status history
+      final List<Map<String, dynamic>> statusHistory = [
         {
-          'status': 'Documents Uploaded',
+          'status': 'Case Submitted',
           'message':
-              '${data.uploadedFiles.length} document(s) have been uploaded and attached to your case.',
+              'Your case has been submitted successfully. Our legal team will review it shortly.',
           'timestamp': now.toIso8601String(),
         },
-      {
-        'status': 'Under Review',
-        'message':
-            'Your documents have been received successfully. Our legal team is reviewing your case.',
-        'timestamp': now.toIso8601String(),
-      },
-    ];
+        if (hasDocuments)
+          {
+            'status': 'Documents Uploaded',
+            'message':
+                '${data.uploadedFiles.length} document(s) have been uploaded and attached to your case.',
+            'timestamp': now.toIso8601String(),
+          },
+        {
+          'status': 'Under Review',
+          'message':
+              'Your documents have been received successfully. Our legal team is reviewing your case.',
+          'timestamp': now.toIso8601String(),
+        },
+      ];
 
-    // 4. Write to Firestore
-    final docRef = await _casesRef.add({
-      'userId': userId,
-      'caseId': caseId,
-      'category': data.category,
-      'subCategory': data.subCategory,
-      'shortDescription': data.shortDescription,
-      'issueDate': data.issueDate?.toIso8601String(),
-      'location': data.location,
-      'additionalInfo': data.additionalInfo,
-      'documentUrls': data.uploadedFiles
-          .map((f) => {
-                'name': f.name,
-                'url': f.downloadUrl,
-                'size': f.sizeLabel,
-              })
-          .toList(),
-      'budgetMin': data.budgetMin,
-      'budgetMax': data.budgetMax,
-      'lawyerLevel': data.lawyerLevel,
-      'status': 'under_review',
-      'createdAt': FieldValue.serverTimestamp(),
-      'caseProgress': caseProgress,
-      'assignedLawyer': null,
-      'statusHistory': statusHistory,
-      'estimatedAssignment': 'Within 24 Hours',
-    });
+      // 4. Write to Firestore
+      final docRef = await _casesRef.add({
+        'userId': userId,
+        'caseId': caseId,
+        'category': data.category,
+        'subCategory': data.subCategory,
+        'shortDescription': data.shortDescription,
+        'issueDate': data.issueDate?.toIso8601String(),
+        'location': data.location,
+        'additionalInfo': data.additionalInfo,
+        'documentUrls': data.uploadedFiles
+            .map((f) => {
+                  'name': f.name,
+                  'url': f.downloadUrl,
+                  'size': f.sizeLabel,
+                })
+            .toList(),
+        'budgetMin': data.budgetMin,
+        'budgetMax': data.budgetMax,
+        'lawyerLevel': data.lawyerLevel,
+        'status': 'under_review',
+        'createdAt': FieldValue.serverTimestamp(),
+        'caseProgress': caseProgress,
+        'assignedLawyer': null,
+        'statusHistory': statusHistory,
+        'estimatedAssignment': 'Within 24 Hours',
+      });
 
-    return docRef.id;
+      debugPrint('CaseService.submitCase SUCCESS: Case created with docId = ${docRef.id}, caseId = $caseId');
+      return docRef.id;
+    } catch (e, stackTrace) {
+      debugPrint('CaseService.submitCase ERROR: $e');
+      debugPrint('StackTrace: $stackTrace');
+      rethrow;
+    }
   }
 
   // ─────────────────────────────────────────────────
@@ -182,23 +191,16 @@ class CaseService {
   // ─────────────────────────────────────────────────
 
   /// Generates a human-readable case ID in the format:
-  /// `{PREFIX}-{YYMM}-{00001}`.
+  /// `{PREFIX}-{YYMM}-{5_RANDOM_DIGITS}`.
   ///
-  /// Example: `LD-2505-00024`
+  /// Example: `LD-2608-48291`
   static Future<String> _generateCaseId(String category) async {
     final prefix = kCategoryPrefixMap[category] ?? 'OT';
     final now = DateTime.now();
     final yearMonth =
         '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}';
-
-    // Query count of existing cases with the same prefix-month pattern
-    final querySnapshot = await _casesRef
-        .where('caseId', isGreaterThanOrEqualTo: '$prefix-$yearMonth-')
-        .where('caseId', isLessThan: '$prefix-$yearMonth-\uf8ff')
-        .get();
-
-    final sequence = (querySnapshot.docs.length + 1).toString().padLeft(5, '0');
-    return '$prefix-$yearMonth-$sequence';
+    final randomNum = (10000 + Random().nextInt(90000)).toString();
+    return '$prefix-$yearMonth-$randomNum';
   }
 
   // ─────────────────────────────────────────────────
@@ -224,39 +226,147 @@ class CaseService {
   // ─────────────────────────────────────────────────
 
   /// Returns a real-time stream of all cases assigned to [lawyerId],
-  /// ordered by creation date (newest first) via client-side sort.
+  /// checking both top-level `lawyerId` and nested `assignedLawyer.lawyerId`.
+  /// Returns a real-time stream of all cases assigned to [lawyerId],
+  /// checking top-level `lawyerId`, nested `assignedLawyer.lawyerId`, and `assignedLawyer.uid`.
+  /// Ordered by creation date (newest first) via client-side sort.
   static Stream<List<CaseModel>> getLawyerCases(String lawyerId) {
-    return _casesRef
-        .where('lawyerId', isEqualTo: lawyerId)
-        .snapshots()
-        .map((snapshot) {
-      final cases =
-          snapshot.docs.map((doc) => CaseModel.fromFirestore(doc)).toList();
-      cases.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      return cases;
-    });
+    if (lawyerId.isEmpty) {
+      debugPrint('[CaseService] getLawyerCases called with EMPTY lawyerId. Emitting empty list.');
+      return Stream.value([]);
+    }
+
+    final stream1 = _casesRef
+        .where('assignedLawyer.lawyerId', isEqualTo: lawyerId)
+        .snapshots();
+    final stream2 =
+        _casesRef.where('lawyerId', isEqualTo: lawyerId).snapshots();
+    final stream3 =
+        _casesRef.where('assignedLawyer.uid', isEqualTo: lawyerId).snapshots();
+
+    int emissionCount = 0;
+
+    late StreamController<List<CaseModel>> controller;
+    StreamSubscription? sub1;
+    StreamSubscription? sub2;
+    StreamSubscription? sub3;
+    final Map<String, CaseModel> casesMap = {};
+
+    controller = StreamController<List<CaseModel>>.broadcast(
+      onListen: () {
+        void emitUpdatedList() {
+          emissionCount++;
+          final list = casesMap.values.toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          debugPrint(
+              '[CaseService] getLawyerCases emission #$emissionCount for lawyerId="$lawyerId": ${list.length} cases found.');
+          if (!controller.isClosed) {
+            controller.add(list);
+          }
+        }
+
+        sub1 = stream1.listen((snapshot) {
+          debugPrint(
+              '[CaseService] Stream 1 (assignedLawyer.lawyerId) emitted ${snapshot.docs.length} docs');
+          for (final doc in snapshot.docs) {
+            casesMap[doc.id] = CaseModel.fromFirestore(doc);
+          }
+          emitUpdatedList();
+        }, onError: (e) {
+          debugPrint('[CaseService] Stream 1 Error: $e');
+        });
+
+        sub2 = stream2.listen((snapshot) {
+          debugPrint(
+              '[CaseService] Stream 2 (lawyerId) emitted ${snapshot.docs.length} docs');
+          for (final doc in snapshot.docs) {
+            casesMap[doc.id] = CaseModel.fromFirestore(doc);
+          }
+          emitUpdatedList();
+        }, onError: (e) {
+          debugPrint('[CaseService] Stream 2 Error: $e');
+        });
+
+        sub3 = stream3.listen((snapshot) {
+          debugPrint(
+              '[CaseService] Stream 3 (assignedLawyer.uid) emitted ${snapshot.docs.length} docs');
+          for (final doc in snapshot.docs) {
+            casesMap[doc.id] = CaseModel.fromFirestore(doc);
+          }
+          emitUpdatedList();
+        }, onError: (e) {
+          debugPrint('[CaseService] Stream 3 Error: $e');
+        });
+      },
+      onCancel: () {
+        sub1?.cancel();
+        sub2?.cancel();
+        sub3?.cancel();
+      },
+    );
+
+    return controller.stream;
+  }
+
+  /// Auto-migration helper to normalize existing case documents in Firestore.
+  /// Ensures both top-level `lawyerId` and `assignedLawyer.lawyerId` are present
+  /// and consistent across all assigned case documents.
+  static Future<int> normalizeLawyerCases() async {
+    try {
+      final snapshot = await _casesRef.get();
+      int updatedCount = 0;
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final assigned = data['assignedLawyer'] as Map<String, dynamic>?;
+        final topLawyerId = (data['lawyerId'] ?? '').toString();
+
+        if (assigned != null && assigned.isNotEmpty) {
+          final assignedLawyerId =
+              (assigned['lawyerId'] ?? assigned['uid'] ?? '').toString();
+          final effectiveLawyerId =
+              assignedLawyerId.isNotEmpty ? assignedLawyerId : topLawyerId;
+
+          if (effectiveLawyerId.isNotEmpty) {
+            bool needsUpdate = false;
+            final updates = <String, dynamic>{};
+
+            if (topLawyerId != effectiveLawyerId) {
+              updates['lawyerId'] = effectiveLawyerId;
+              needsUpdate = true;
+            }
+            if (assignedLawyerId != effectiveLawyerId) {
+              updates['assignedLawyer.lawyerId'] = effectiveLawyerId;
+              needsUpdate = true;
+            }
+
+            if (needsUpdate) {
+              await doc.reference.update(updates);
+              updatedCount++;
+              debugPrint(
+                  '[CaseService] Normalized case ${doc.id} with lawyerId: $effectiveLawyerId');
+            }
+          }
+        }
+      }
+      debugPrint('[CaseService] Total normalized cases: $updatedCount');
+      return updatedCount;
+    } catch (e) {
+      debugPrint('[CaseService] Error normalizing cases: $e');
+      return 0;
+    }
   }
 
   /// Stream of total case count for a lawyer.
   static Stream<int> getLawyerCaseCount(String lawyerId) {
-    return _casesRef
-        .where('lawyerId', isEqualTo: lawyerId)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+    return getLawyerCases(lawyerId).map((cases) => cases.length);
   }
 
   /// Stream of case count filtered by status for a lawyer.
   static Stream<int> getLawyerCaseCountByStatus(
       String lawyerId, List<String> statuses) {
-    return _casesRef
-        .where('lawyerId', isEqualTo: lawyerId)
-        .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        final status = data['status'] as String? ?? '';
-        return statuses.contains(status);
-      }).length;
+    return getLawyerCases(lawyerId).map((cases) {
+      return cases.where((c) => statuses.contains(c.status)).length;
     });
   }
 

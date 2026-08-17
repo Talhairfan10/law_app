@@ -386,7 +386,7 @@ class _LawyerUploadDocumentsScreenState
     }
   }
 
-  // ── Documents List ──
+  // ── Documents List (Full Combined List: Client + Lawyer) ──
   Widget _buildDocumentsList(CaseModel caseData) {
     final docs = caseData.documentUrls;
 
@@ -400,7 +400,7 @@ class _LawyerUploadDocumentsScreenState
               const Icon(Icons.folder_outlined, size: 18, color: _navyDark),
               const SizedBox(width: 8),
               Text(
-                'Uploaded Documents',
+                'All Case Documents',
                 style: GoogleFonts.poppins(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -416,7 +416,7 @@ class _LawyerUploadDocumentsScreenState
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '${docs.length} files',
+                  '${docs.length} ${docs.length == 1 ? 'file' : 'files'}',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -452,26 +452,45 @@ class _LawyerUploadDocumentsScreenState
             )
           else
             ...docs.asMap().entries.map((entry) {
-              return _buildDocumentCard(entry.value, entry.key);
+              return _buildDocumentCard(entry.value, entry.key, caseData);
             }),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentCard(Map<String, dynamic> doc, int index) {
-    final name = doc['name'] as String? ?? 'Document';
-    final ext = doc['extension'] as String? ?? '';
-    final size = doc['sizeLabel'] as String? ?? '';
-    final url = doc['url'] as String? ?? '';
-    final docType = doc['documentType'] as String? ?? 'General';
-    final uploadedBy = doc['uploadedBy'] as String? ?? '';
-    final uploadedAt = doc['uploadedAt'] as String? ?? '';
+  Widget _buildDocumentCard(
+      Map<String, dynamic> doc, int index, CaseModel caseData) {
+    final name = (doc['name'] ?? doc['title'] ?? doc['fileName'] ?? 'Document')
+        .toString();
+    final url = (doc['url'] ??
+            doc['secure_url'] ??
+            doc['downloadUrl'] ??
+            doc['path'] ??
+            '')
+        .toString();
+    final rawSize = doc['sizeLabel'] ?? doc['size'] ?? doc['fileSize'];
+    String sizeStr = '';
+    if (rawSize is num) {
+      sizeStr = _formatFileSize(rawSize.toInt());
+    } else if (rawSize != null) {
+      sizeStr = rawSize.toString();
+    }
+
+    final docType =
+        (doc['documentType'] ?? doc['type'] ?? 'General').toString();
+    final uploadedBy = (doc['uploadedBy'] ?? 'Client').toString();
+    final uploadedAt = (doc['uploadedAt'] ?? doc['date'] ?? doc['createdAt'] ?? '').toString();
+
+    String ext = (doc['extension'] ?? '').toString().toLowerCase();
+    if (ext.isEmpty && name.contains('.')) {
+      ext = name.split('.').last.toLowerCase();
+    }
 
     // Icon based on extension
     IconData fileIcon;
     Color fileColor;
-    switch (ext.toLowerCase()) {
+    switch (ext) {
       case 'pdf':
         fileIcon = Icons.picture_as_pdf_rounded;
         fileColor = _redAccent;
@@ -501,99 +520,104 @@ class _LawyerUploadDocumentsScreenState
           'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ];
-        dateLabel =
-            '${dt.day} ${months[dt.month - 1]} ${dt.year}';
+        dateLabel = '${dt.day} ${months[dt.month - 1]} ${dt.year}';
       }
     }
+    if (dateLabel.isEmpty) {
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      dateLabel = '${caseData.createdAt.day} ${months[caseData.createdAt.month - 1]} ${caseData.createdAt.year}';
+    }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // File icon
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: fileColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () => _openDocument(url),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: _white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-            child: Icon(fileIcon, color: fileColor, size: 22),
-          ),
-          const SizedBox(width: 12),
+          ],
+        ),
+        child: Row(
+          children: [
+            // File icon
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: fileColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(fileIcon, color: fileColor, size: 22),
+            ),
+            const SizedBox(width: 12),
 
-          // File info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _navyDark,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    Text(
-                      '${ext.toUpperCase()} • $size',
-                      style: GoogleFonts.poppins(
-                          fontSize: 11, color: _textMuted),
+            // File info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: _navyDark,
                     ),
-                    if (docType != 'General') ...[
-                      Text(' • ',
-                          style: GoogleFonts.poppins(
-                              fontSize: 11, color: _textMuted)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: _blueAccent.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          docType,
-                          style: GoogleFonts.poppins(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            color: _blueAccent,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Text(
+                        '${ext.isNotEmpty ? ext.toUpperCase() : 'FILE'}${sizeStr.isNotEmpty ? ' • $sizeStr' : ''}',
+                        style: GoogleFonts.poppins(
+                            fontSize: 11, color: _textMuted),
+                      ),
+                      if (docType != 'General' && docType.isNotEmpty) ...[
+                        Text(' • ',
+                            style: GoogleFonts.poppins(
+                                fontSize: 11, color: _textMuted)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: _blueAccent.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            docType,
+                            style: GoogleFonts.poppins(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: _blueAccent,
+                            ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
-                ),
-                if (uploadedBy.isNotEmpty || dateLabel.isNotEmpty)
+                  ),
                   Text(
-                    '${uploadedBy.isNotEmpty ? 'By $uploadedBy' : ''}${dateLabel.isNotEmpty ? ' • $dateLabel' : ''}',
+                    'Uploaded by $uploadedBy • $dateLabel',
                     style: GoogleFonts.poppins(
                         fontSize: 10, color: _textMuted),
                   ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          // Action buttons
-          if (url.isNotEmpty)
-            GestureDetector(
-              onTap: () => _openDocument(url),
-              child: Container(
+            // Action buttons
+            if (url.isNotEmpty)
+              Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: _blueAccent.withValues(alpha: 0.08),
@@ -602,16 +626,58 @@ class _LawyerUploadDocumentsScreenState
                 child: const Icon(Icons.open_in_new_rounded,
                     size: 18, color: _blueAccent),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Future<void> _openDocument(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final cleanUrl = url.trim();
+    if (cleanUrl.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document URL is empty or unavailable.',
+                style: GoogleFonts.poppins()),
+            backgroundColor: _redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    final uri = Uri.tryParse(cleanUrl);
+    if (uri != null) {
+      try {
+        final launched =
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+        if (!launched && mounted) {
+          await launchUrl(uri, mode: LaunchMode.platformDefault);
+        }
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not open document link.',
+                  style: GoogleFonts.poppins()),
+              backgroundColor: _redAccent,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Invalid document URL format.',
+                style: GoogleFonts.poppins()),
+            backgroundColor: _redAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

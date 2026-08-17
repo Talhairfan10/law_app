@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/case_service.dart';
@@ -35,18 +37,41 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
 
   Future<void> _fetchClientName(String userId) async {
     if (_clientName != null) return;
+    if (userId.isEmpty) {
+      if (mounted) setState(() => _clientName = 'Client');
+      return;
+    }
+
     try {
+      debugPrint('[LawyerCaseDetailsScreen] Fetching client name for userId: $userId');
       final doc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .get();
-      if (mounted && doc.exists) {
+
+      if (mounted) {
+        if (doc.exists) {
+          final data = doc.data() ?? {};
+          final name = (data['fullName'] ?? data['name'] ?? data['displayName'] ?? data['email'] ?? 'Client').toString();
+          debugPrint('[LawyerCaseDetailsScreen] Client name fetched: $name');
+          setState(() {
+            _clientName = name.isNotEmpty ? name : 'Client';
+          });
+        } else {
+          debugPrint('[LawyerCaseDetailsScreen] User doc does not exist for userId: $userId');
+          setState(() {
+            _clientName = 'Client (${userId.length > 6 ? userId.substring(0, 6) : userId})';
+          });
+        }
+      }
+    } catch (e, stack) {
+      debugPrint('[LawyerCaseDetailsScreen] Error fetching client name: $e');
+      debugPrint('StackTrace: $stack');
+      if (mounted) {
         setState(() {
-          _clientName = doc.data()?['fullName'] as String? ?? 'Client';
+          _clientName = 'Client';
         });
       }
-    } catch (_) {
-      _clientName = 'Client';
     }
   }
 
@@ -80,6 +105,8 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
                   _buildCaseInformation(caseData),
                   const SizedBox(height: 20),
                   _buildCaseDescription(caseData),
+                  const SizedBox(height: 20),
+                  _buildCaseDocumentsPreview(caseData),
                   const SizedBox(height: 16),
                   _buildNotes(caseData),
                   const SizedBox(height: 20),
@@ -287,10 +314,22 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
 
   // ── Case Information Grid ──
   Widget _buildCaseInformation(CaseModel c) {
-    // Get next hearing
     final clientId = c.userId.length > 8
         ? 'CLT-${c.userId.substring(0, 4).toUpperCase()}'
         : c.userId;
+
+    final formattedIssueDate = c.issueDate != null
+        ? DateFormat('dd MMM yyyy').format(c.issueDate!)
+        : 'Not specified';
+
+    String levelLabel = 'Recommended';
+    if (c.lawyerLevel.toLowerCase() == 'senior') {
+      levelLabel = 'Senior Lawyer';
+    } else if (c.lawyerLevel.toLowerCase() == 'most_senior') {
+      levelLabel = 'Most Senior';
+    } else if (c.lawyerLevel.isNotEmpty) {
+      levelLabel = c.lawyerLevel[0].toUpperCase() + c.lawyerLevel.substring(1);
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -325,24 +364,60 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            // Grid of info items
-            Row(
-              children: [
-                Expanded(
-                    child: _infoItem(
-                        Icons.person_outline, 'Client ID', clientId)),
-                Expanded(
-                    child: _infoItem(
-                        Icons.account_balance_outlined, 'Court',
-                        c.location.isNotEmpty ? c.location : 'Not assigned')),
-              ],
-            ),
-            const SizedBox(height: 14),
+            // Grid row 1: Client Name & Client ID
             Row(
               children: [
                 Expanded(
                     child: _infoItem(Icons.person_outline, 'Client Name',
                         _clientName ?? 'Loading...')),
+                Expanded(
+                    child: _infoItem(
+                        Icons.fingerprint_outlined, 'Client ID', clientId)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Grid row 2: Category & Sub-Category
+            Row(
+              children: [
+                Expanded(
+                    child: _infoItem(Icons.folder_outlined, 'Category',
+                        c.category.isNotEmpty ? c.category : 'General')),
+                Expanded(
+                    child: _infoItem(Icons.subdirectory_arrow_right_rounded,
+                        'Sub-Category',
+                        c.subCategory.isNotEmpty ? c.subCategory : 'None')),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Grid row 3: Issue Date & Location/Court
+            Row(
+              children: [
+                Expanded(
+                    child: _infoItem(Icons.event_outlined, 'Issue Date',
+                        formattedIssueDate)),
+                Expanded(
+                    child: _infoItem(
+                        Icons.location_on_outlined, 'Location / Court',
+                        c.location.isNotEmpty ? c.location : 'Not specified')),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Grid row 4: Fee Budget & Lawyer Level
+            Row(
+              children: [
+                Expanded(
+                    child: _infoItem(Icons.attach_money_rounded, 'Fee Budget',
+                        'PKR ${c.budgetMin} - ${c.budgetMax}')),
+                Expanded(
+                    child: _infoItem(Icons.workspace_premium_outlined,
+                        'Req. Lawyer Level', levelLabel,
+                        valueColor: _gold)),
+              ],
+            ),
+            const SizedBox(height: 14),
+            // Grid row 5: Next Hearing & Priority
+            Row(
+              children: [
                 Expanded(
                   child: StreamBuilder<Map<String, dynamic>?>(
                     stream: HearingService.getNextHearingForCase(
@@ -353,9 +428,8 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
                         final date = _parseDateTime(snap.data!['date']);
                         final time = snap.data!['time'] as String? ?? '';
                         if (date != null) {
-                          final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
                           hearingText =
-                              '${date.day} ${months[date.month - 1]} ${date.year}, $time';
+                              '${DateFormat('dd MMM yyyy').format(date)}, $time';
                         }
                       }
                       return _infoItem(Icons.calendar_today_outlined,
@@ -363,28 +437,6 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
                     },
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                    child: _infoItem(Icons.folder_outlined, 'Category',
-                        c.subCategory.isNotEmpty ? c.subCategory : c.category)),
-                Expanded(
-                    child: _infoItem(Icons.attach_money_rounded, 'Fee Range',
-                        'PKR ${c.budgetMin} - ${c.budgetMax}')),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                Expanded(
-                    child: _infoItem(
-                        Icons.description_outlined, 'Case Type',
-                        c.shortDescription.isNotEmpty
-                            ? c.shortDescription
-                            : c.categoryDisplayName)),
                 Expanded(
                     child: _infoItem(Icons.flag_outlined, 'Priority', 'Medium',
                         valueColor: _gold)),
@@ -432,8 +484,22 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
     );
   }
 
-  // ── Case Description ──
+  // ── Case Description & Original Client Submission ──
   Widget _buildCaseDescription(CaseModel c) {
+    final formattedIssueDate = c.issueDate != null
+        ? DateFormat('dd MMM yyyy').format(c.issueDate!)
+        : 'Not specified';
+
+    final categoryStr = c.category.isNotEmpty ? c.category : 'General';
+    final subCategoryStr = c.subCategory.isNotEmpty ? c.subCategory : 'None';
+    final locationStr = c.location.isNotEmpty ? c.location : 'Not specified';
+    final shortDescStr = c.shortDescription.isNotEmpty
+        ? c.shortDescription
+        : 'No short description provided.';
+    final additionalInfoStr = c.additionalInfo.isNotEmpty
+        ? c.additionalInfo
+        : 'No additional information provided by client.';
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -455,11 +521,11 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.description_outlined,
-                    size: 18, color: _navyDark),
+                const Icon(Icons.assignment_outlined,
+                    size: 20, color: _navyDark),
                 const SizedBox(width: 8),
                 Text(
-                  'Case Description',
+                  'Original Client Submission',
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
@@ -468,23 +534,341 @@ class _LawyerCaseDetailsScreenState extends State<LawyerCaseDetailsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
+
+            // Badges row for Category & Sub-Category
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _navyDark.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.folder_outlined,
+                          size: 14, color: _navyDark),
+                      const SizedBox(width: 4),
+                      Text(
+                        categoryStr,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: _navyDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (subCategoryStr != 'None') ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _blueAccent.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.subdirectory_arrow_right_rounded,
+                            size: 14, color: _blueAccent),
+                        const SizedBox(width: 4),
+                        Text(
+                          subCategoryStr,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: _blueAccent,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // Short Description / Case Title
             Text(
-              c.additionalInfo.isNotEmpty
-                  ? c.additionalInfo
-                  : c.shortDescription.isNotEmpty
-                      ? c.shortDescription
-                      : 'No description provided.',
+              'Case Title / Summary',
               style: GoogleFonts.poppins(
-                fontSize: 13,
-                color: const Color(0xFF4A5568),
-                height: 1.6,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _textMuted,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              shortDescStr,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: _navyDark,
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Row for Issue Date & Location
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.event_outlined,
+                          size: 16, color: _textMuted),
+                      const SizedBox(width: 6),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Issue Date',
+                            style: GoogleFonts.poppins(
+                                fontSize: 10, color: _textMuted),
+                          ),
+                          Text(
+                            formattedIssueDate,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _navyDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on_outlined,
+                          size: 16, color: _textMuted),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Location / City',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 10, color: _textMuted),
+                            ),
+                            Text(
+                              locationStr,
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: _navyDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: 12),
+
+            // Additional Information / Client Details
+            Text(
+              'Additional Information / Case Details',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _textMuted,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F9FA),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFEFEFEF)),
+              ),
+              child: Text(
+                additionalInfoStr,
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  color: const Color(0xFF4A5568),
+                  height: 1.6,
+                  fontStyle: c.additionalInfo.isEmpty
+                      ? FontStyle.italic
+                      : FontStyle.normal,
+                ),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // ── Case Documents Preview ──
+  Widget _buildCaseDocumentsPreview(CaseModel c) {
+    final docs = c.documentUrls;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.folder_outlined,
+                          size: 18, color: _navyDark),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          'Case Documents (${docs.length})',
+                          style: GoogleFonts.poppins(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: _navyDark,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LawyerUploadDocumentsScreen(
+                            caseDocId: widget.caseDocId),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _blueAccent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Manage Docs',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _blueAccent,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            if (docs.isEmpty)
+              Text(
+                'No documents attached to this case yet.',
+                style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    color: _textMuted,
+                    fontStyle: FontStyle.italic),
+              )
+            else
+              ...docs.take(3).map((doc) {
+                final name =
+                    (doc['name'] ?? doc['title'] ?? 'Document').toString();
+                final url = (doc['url'] ??
+                        doc['secure_url'] ??
+                        doc['downloadUrl'] ??
+                        '')
+                    .toString();
+                final size = (doc['sizeLabel'] ?? doc['size'] ?? '').toString();
+                final uploadedBy = (doc['uploadedBy'] ?? 'Client').toString();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F9FA),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFEFEFEF)),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 2),
+                    onTap: () => _openLawyerDocumentUrl(url),
+                    leading: const Icon(Icons.insert_drive_file_outlined,
+                        color: _blueAccent, size: 20),
+                    title: Text(
+                      name,
+                      style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _navyDark),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${size.isNotEmpty ? '$size • ' : ''}Uploaded by $uploadedBy',
+                      style: GoogleFonts.poppins(
+                          fontSize: 10, color: _textMuted),
+                    ),
+                    trailing: const Icon(Icons.open_in_new_rounded,
+                        size: 16, color: _blueAccent),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openLawyerDocumentUrl(String url) async {
+    final cleanUrl = url.trim();
+    if (cleanUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Document URL is empty or unavailable.',
+              style: GoogleFonts.poppins()),
+          backgroundColor: const Color(0xFFE05252),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+    final uri = Uri.tryParse(cleanUrl);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   // ── Notes (editable) ──
